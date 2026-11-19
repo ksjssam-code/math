@@ -41,7 +41,7 @@ function readQ(){try{return JSON.parse(localStorage.getItem(Q_KEY))||[]}catch(e)
 function writeQ(q){memQueue=q;try{localStorage.setItem(Q_KEY,JSON.stringify(q))}catch(e){}}
 function logEvent(type,data={}){
   const C=window.MATHLAB_CONFIG||{};if(!C.sheetUrl)return;
-  if(isMom()&&type!=='security')return;
+  if(isMom())return;
   if(['note','letter','mood'].includes(type)&&!data.id)data.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   const ev=Object.assign({time:new Date().toISOString(),unit:(window.UNIT&&UNIT.title)||'',name:STUDENT?(STUDENT.name||''):'',page:(location.hash||'#home').slice(1),type},data);
   const q=readQ();q.push(ev);writeQ(q.slice(-500));
@@ -59,45 +59,57 @@ window.addEventListener('pagehide',flushLog);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushLog()});
 function studentLabel(){return STUDENT?STUDENT.name:''}
 async function sha256(t){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
-const UNLOCK_KEY='math-lab-unlocked-';
-let UNLOCK_MEM={};
 function deviceStr(){
   let id='';try{id=localStorage.getItem('math-lab-device');if(!id){id=Math.random().toString(36).slice(2,6).toUpperCase();localStorage.setItem('math-lab-device',id)}}catch(e){id='?'}
   const u=navigator.userAgent;const os=/iPad/.test(u)?'iPad':/iPhone/.test(u)?'iPhone':/Android/.test(u)?(/Mobile/.test(u)?'안드로이드폰':'안드로이드 태블릿'):/CrOS/.test(u)?'크롬북':/Mac/.test(u)?'Mac':/Windows/.test(u)?'Windows':'기타';
   const br=/SamsungBrowser/.test(u)?'삼성 인터넷':/Whale/.test(u)?'웨일':/Edg\//.test(u)?'엣지':/CriOS|Chrome/.test(u)?'크롬':/Safari/.test(u)?'사파리':'기타';
   return `기기 #${id} · ${os} · ${br}`;
 }
-function kidOf(name){const C=window.MATHLAB_CONFIG||{};if(C.mom&&name===C.mom.name)return C.mom;return (C.kids||[]).find(k=>k.name===name)}
+/* 비밀번호는 구글 시트 '비밀번호' 탭에만 있어요. 확인도 시트(Apps Script)가 해요. */
+let TOKEN_MEM={};
+function api(action,payload){
+  const C=window.MATHLAB_CONFIG||{};if(!C.sheetUrl)return Promise.reject('시트 주소가 없어요');
+  return fetch(C.sheetUrl,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({action},payload))}).then(r=>r.json());
+}
+function kidOf(name){const C=window.MATHLAB_CONFIG||{};if(C.mom&&name===C.mom.name)return Object.assign({isMom:true},C.mom);return (C.kids||[]).find(k=>k.name===name)}
 function isMom(){return !!(STUDENT&&STUDENT.mom)}
-function readKey(name){try{return localStorage.getItem('math-lab-key-'+name)||''}catch(e){return UNLOCK_MEM['key-'+name]||''}}
-function isUnlocked(name){const k=kidOf(name);if(!k)return false;if(!k.passHash)return !k.isMom;try{return localStorage.getItem(UNLOCK_KEY+name)===k.passHash}catch(e){return UNLOCK_MEM[name]===k.passHash}}
+function readKey(name){try{return localStorage.getItem('math-lab-token-'+name)||''}catch(e){return TOKEN_MEM[name]||''}}
+function setToken(name,t){TOKEN_MEM[name]=t;try{t?localStorage.setItem('math-lab-token-'+name,t):localStorage.removeItem('math-lab-token-'+name)}catch(e){}}
+function isUnlocked(name){return !!readKey(name)}
 function askPass(kid,onOk,onCancel){
-  const inp=h('input',{class:'ans',type:'password',placeholder:'내 비밀번호',style:'width:180px',autocomplete:'off'});const err=h('div',{class:'small',style:'color:var(--bad);min-height:20px'});
-  let fails=0;
-  const go=async()=>{const pw=inp.value.trim();const hv=await sha256(pw);
-    if(hv===kid.passHash){const rk=await sha256('read:'+pw);UNLOCK_MEM['key-'+kid.name]=rk;try{localStorage.setItem('math-lab-key-'+kid.name,rk)}catch(e){}logEvent('security',{name:kid.name,tag:'비밀번호 통과',ok:'O',answer:deviceStr()});UNLOCK_MEM[kid.name]=hv;try{localStorage.setItem(UNLOCK_KEY+kid.name,hv)}catch(e){}ov.remove();onOk()}
-    else{fails++;logEvent('security',{name:kid.name,tag:'비밀번호 틀림',ok:'X',answer:deviceStr()});flushLog();inp.value='';inp.focus();
-      if(fails>=5){err.textContent='여러 번 틀렸어요. 30초 뒤에 다시 해 보세요.';inp.disabled=true;setTimeout(()=>{inp.disabled=false;fails=0;err.textContent='';inp.focus()},30000)}
-      else err.textContent='비밀번호가 달라요.'}};
-  inp.addEventListener('keydown',e=>{if(e.key==='Enter')go()});
+  const inp=h('input',{class:'ans',type:'password',inputmode:'numeric',placeholder:'비밀번호',style:'width:180px',autocomplete:'off'});const err=h('div',{class:'small',style:'color:var(--bad);min-height:20px'});
+  const btn=h('button',{class:'btn coral'},'확인');
+  const go=()=>{const pw=inp.value.trim();if(!pw)return;btn.disabled=true;inp.disabled=true;err.style.color='var(--sub)';err.textContent='확인하는 중…';
+    api('login',{who:kid.name,pw,device:deviceStr()}).then(j=>{
+      btn.disabled=false;inp.disabled=false;err.style.color='var(--bad)';
+      if(j.ok&&j.token){setToken(kid.name,j.token);ov.remove();onOk()}
+      else{err.textContent=j.ok?'엄마가 아직 시트 코드를 새로 올리지 않았어요.':(j.error||'비밀번호가 달라요.');inp.value='';inp.focus()}
+    }).catch(()=>{btn.disabled=false;inp.disabled=false;err.style.color='var(--bad)';err.textContent='인터넷 연결을 확인하고 다시 해 보세요.'})};
+  btn.onclick=go;inp.addEventListener('keydown',e=>{if(e.key==='Enter')go()});
   const ov=h('div',{class:'overlay'},h('div',{class:'card',style:'max-width:360px;width:92%;text-align:center'},
     h('div',{style:'font-size:44px'},kid.emoji||'🙂'),h('h2',{style:'margin:4px 0'},`${kid.name}의 비밀번호`),h('p',{class:'small',style:'margin:0 0 14px'},'이 기기에서는 한 번만 입력하면 돼요.'),
-    h('div',{class:'row',style:'justify-content:center'},inp,h('button',{class:'btn coral',onclick:go},'확인')),err,
-    h('button',{class:'btn ghost small',style:'margin-top:6px',onclick:()=>{ov.remove();onCancel&&onCancel()}},'← 이름 다시 고르기')));
+    h('div',{class:'row',style:'justify-content:center'},inp,btn),err,
+    h('button',{class:'btn ghost small',style:'margin-top:6px',onclick:()=>{ov.remove();onCancel&&onCancel()}},'← 다시 고르기')));
   document.body.append(ov);inp.focus();
 }
+function verifySession(){
+  // 엄마가 시트에서 비밀번호를 바꾸면 이전에 들어온 기기는 다시 비밀번호를 물어요
+  if(!STUDENT)return;const name=STUDENT.name;
+  api('check',{who:name,token:readKey(name)}).then(j=>{if(j&&((j.ok===false&&j.invalid)||(j.ok&&j.token===undefined&&!('invalid' in j)&&false))){setToken(name,'');location.reload()}}).catch(()=>{});
+}
 function ensureStudent(cb,force){
-  if(STUDENT&&!force&&isUnlocked(STUDENT.name)){afterLogin(cb);return}
+  if(STUDENT&&!force&&isUnlocked(STUDENT.name)){verifySession();afterLogin(cb);return}
   const C=window.MATHLAB_CONFIG||{};const kids=C.kids||[];
+  const pick=(k)=>{
+    const done=()=>{STUDENT=k.isMom?{name:k.name,mom:true}:{name:k.name};try{localStorage.setItem(STU_KEY,JSON.stringify(STUDENT))}catch(e){}
+      location.reload()};
+    ov.remove();
+    if(isUnlocked(k.name))done();else askPass(k,done,()=>ensureStudent(cb,force));
+  };
   const ov=h('div',{class:'overlay',style:'background:var(--bg)'},h('div',{class:'card',style:'max-width:420px;width:92%;text-align:center'},
     h('h2',{style:'margin:0 0 6px'},'누가 공부할까요? 👋'),h('p',{class:'small',style:'margin:0 0 16px'},'내 이름을 누르고 내 비밀번호를 입력해요.'),
-    h('div',{class:'row',style:'justify-content:center;gap:14px'},...kids.map(k=>h('button',{class:'kid-btn',style:`--c:${k.color||'var(--coral)'}`,onclick:()=>{
-      const done=()=>{STUDENT=k.isMom?{name:k.name,mom:true}:{name:k.name};try{localStorage.setItem(STU_KEY,JSON.stringify(STUDENT))}catch(e){}
-        if(force){location.reload();return}updateWho();logEvent('login',{answer:deviceStr()});afterLogin(cb)};
-      ov.remove();
-      if(isUnlocked(k.name))done();else askPass(k,done,()=>ensureStudent(cb,force));
-    }},h('span',{style:'font-size:40px'},k.emoji||'🙂'),h('b',{},k.name)))),
-    (C.mom&&C.mom.passHash)?h('button',{class:'mom-link',onclick:()=>{ov.remove();const m=Object.assign({isMom:true},C.mom);const done=()=>{STUDENT={name:m.name,mom:true};try{localStorage.setItem(STU_KEY,JSON.stringify(STUDENT))}catch(e){}location.reload()};if(isUnlocked(m.name))done();else askPass(m,done,()=>ensureStudent(cb,force))}},'엄마'):''));
+    h('div',{class:'row',style:'justify-content:center;gap:14px'},...kids.map(k=>h('button',{class:'kid-btn',style:`--c:${k.color||'var(--coral)'}`,onclick:()=>pick(k)},h('span',{style:'font-size:40px'},k.emoji||'🙂'),h('b',{},k.name)))),
+    C.mom?h('button',{class:'mom-link',onclick:()=>pick(kidOf(C.mom.name))},'엄마'):''));
   document.body.append(ov);
 }
 const MOODS=[['😆','신나요'],['🙂','좋아요'],['😐','그저 그래요'],['😢','속상해요'],['😠','화나요'],['😴','피곤해요']];
@@ -330,9 +342,8 @@ const G = {
    ============================================================ */
 function fmtTime(t){try{const d=new Date(t);return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`}catch(e){return ''}}
 function fetchWritings(who){
-  const C=window.MATHLAB_CONFIG||{};const key=readKey(who);
-  if(!C.sheetUrl||!key)return Promise.resolve([]);
-  return fetch(`${C.sheetUrl}?who=${encodeURIComponent(who)}&key=${key}&t=${Date.now()}`).then(r=>r.json()).then(j=>j.ok?j.rows:Promise.reject(j.error));
+  if(!readKey(who))return Promise.resolve([]);
+  return api('list',{who,token:readKey(who)}).then(j=>{if(j.ok)return j.rows;if(j.invalid){setToken(who,'');location.reload()}return Promise.reject(j.error)});
 }
 function seenKey(){return 'math-lab-seen-'+(STUDENT?STUDENT.name:'')}
 function markRepliesSeen(rows){try{localStorage.setItem(seenKey(),JSON.stringify(rows.map(r=>r.id+'|'+r.reply)))}catch(e){};const b=document.getElementById('fab-badge');if(b)b.classList.add('hide')}
@@ -343,8 +354,7 @@ function checkReplies(){
   }).catch(()=>{});
 }
 function sendReply(id,text){
-  const C=window.MATHLAB_CONFIG||{};
-  return fetch(C.sheetUrl,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({who:STUDENT.name,key:readKey(STUDENT.name),events:[{type:'reply',id,answer:text,time:new Date().toISOString(),name:STUDENT.name}]})});
+  return api('reply',{who:STUDENT.name,token:readKey(STUDENT.name),id,text}).then(j=>j.ok?j:Promise.reject(j.error));
 }
 function openMomInbox(){
   let filter='전체',rows=[];
@@ -359,7 +369,7 @@ function openMomInbox(){
       const ta=h('textarea',{class:'note',style:'min-height:60px',placeholder:`${r.name}에게 답장 쓰기…`});ta.value=r.reply||'';
       const st=h('span',{class:'small'});
       const btn=h('button',{class:'btn small coral',onclick:()=>{const v=ta.value.trim();if(!v)return;btn.disabled=true;st.textContent='보내는 중…';
-        sendReply(r.id,v).then(()=>{r.reply=v;st.textContent='✔ 보냈어요. 아이가 다음에 들어오면 알림이 떠요.';btn.disabled=false}).catch(()=>{st.textContent='보내지 못했어요. 다시 눌러 주세요.';btn.disabled=false})}},r.reply?'답장 고치기':'답장 보내기');
+        sendReply(r.id,v).then(()=>{r.reply=v;st.textContent='✔ 보냈어요. 아이가 다음에 들어오면 알림이 떠요.';btn.textContent='답장 고치기';btn.disabled=false}).catch(()=>{st.textContent='보내지 못했어요. 다시 눌러 주세요.';btn.disabled=false})}},r.reply?'답장 고치기':'답장 보내기');
       list.append(h('div',{class:'prob'},h('div',{class:'small'},`${r.name} · ${fmtTime(r.time)} · ${r.kind}${r.topic?' · '+r.topic:''}`),
         h('div',{style:'white-space:pre-wrap;margin:6px 0 10px'},r.text||''),ta,h('div',{class:'row',style:'margin-top:6px'},btn,st)));
     });

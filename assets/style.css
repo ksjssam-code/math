@@ -173,3 +173,4 @@ table.t th{background:#F7F1E6;font-weight:400;font-family:Jua}
 .mom-bar button{border:none;background:#fff;color:var(--grape);border-radius:999px;padding:2px 12px;margin-left:6px;font-family:Jua}
 .fab-badge{position:absolute;top:-4px;right:-4px;background:var(--bad);color:#fff;border-radius:999px;font-size:13px;min-width:22px;height:22px;display:grid;place-items:center;font-family:Jua}
 .reply-bubble{margin-top:8px;background:var(--grape-soft);color:#3E2490;border-radius:12px 12px 12px 2px;padding:8px 12px;white-space:pre-wrap}
+.note-card{background:#FFFDF6;border:1.5px solid #F1E3C4;border-left:5px solid var(--sun);border-radius:12px;padding:10px 14px;margin:10px 0}

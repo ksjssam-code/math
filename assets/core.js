@@ -43,6 +43,7 @@ function logEvent(type,data={}){
   const C=window.MATHLAB_CONFIG||{};if(!C.sheetUrl)return;
   if(isMom())return;
   if(['note','letter','mood'].includes(type)&&!data.id)data.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  if(type==='note'&&window.UNIT&&UNIT.title&&data.q&&!String(data.q).startsWith('['))data.q=`[${UNIT.title}] ${data.q}`;
   const ev=Object.assign({time:new Date().toISOString(),unit:(window.UNIT&&UNIT.title)||'',name:STUDENT?(STUDENT.name||''):'',page:(location.hash||'#home').slice(1),type},data);
   const q=readQ();q.push(ev);writeQ(q.slice(-500));
   clearTimeout(logEvent._t);logEvent._t=setTimeout(flushLog,1200);
@@ -380,4 +381,41 @@ function openMomInbox(){
   document.body.append(ov);
   list.append(h('div',{class:'small'},'불러오는 중…'));
   fetchWritings(STUDENT.name).then(r=>{rows=r||[];draw()}).catch(e=>{list.innerHTML='';list.append(h('div',{class:'cond'},'글을 불러오지 못했어요. ('+e+')'))});
+}
+
+/* ============================================================
+   첫 화면: 단원과 상관없이 쌓이는 발견 노트
+   ============================================================ */
+function localNotes(){
+  // 시트에 아직 안 간 글이나 인터넷이 안 될 때를 위한 이 기기 기록
+  const out=[];
+  try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);
+    if(!k.startsWith('math-lab-u')||!k.endsWith('-'+(STUDENT?STUDENT.name:'')))continue;
+    const st=JSON.parse(localStorage.getItem(k)||'{}');const unit=k.split('-')[2];
+    Object.entries(st.notes||{}).forEach(([nk,v])=>{if(String(v).trim())out.push({time:'',name:STUDENT.name,kind:nk.startsWith('essay')?'서술형 풀이':'발견 노트',topic:`[${unit}]`,text:v,reply:''})})}}catch(e){}
+  return out;
+}
+function renderNoteWall(container){
+  const box=h('div',{class:'card',style:'margin-top:22px'});container.append(box);
+  const mom=isMom();
+  box.append(h('div',{class:'row',style:'justify-content:space-between'},h('h2',{style:'margin:0;font-size:24px'},mom?'📒 아이들 발견 노트':'📒 나의 발견 노트'),h('span',{class:'small'},'모든 단원에서 쓴 노트가 여기 모여요')));
+  const tabs=h('div',{class:'row',style:'margin:8px 0'});const list=h('div');box.append(tabs,list);
+  let rows=[],filter='전체';
+  function draw(){
+    list.innerHTML='';[...tabs.children].forEach(t=>t.classList.toggle('sel',t.dataset.k===filter));
+    const rs=rows.filter(r=>/발견 노트|서술형/.test(r.kind)&&(filter==='전체'||r.name===filter));
+    if(!rs.length){list.append(h('div',{class:'cond'},mom?'아직 쓴 발견 노트가 없어요.':'아직 쓴 발견 노트가 없어요. 단원 탐구 활동의 ✏️ 칸에 생각을 써 보세요!'));return}
+    rs.forEach(r=>{
+      const topic=String(r.topic||'');const m=topic.match(/^\[([^\]]+)\]\s*(.*)$/);
+      list.append(h('div',{class:'note-card'},
+        h('div',{class:'small'},[mom?r.name:'',r.time?fmtTime(r.time):'',m?m[1]:'',r.kind].filter(Boolean).join(' · ')),
+        (m?m[2]:topic)?h('div',{class:'small',style:'color:var(--ink);margin:2px 0 6px'},'Q. '+(m?m[2]:topic)):'',
+        h('div',{style:'white-space:pre-wrap'},r.text||''),
+        r.reply?h('div',{class:'reply-bubble'},'👩 ',r.reply):''));
+    });
+  }
+  if(mom){['전체',...((window.MATHLAB_CONFIG||{}).kids||[]).map(k=>k.name)].forEach(k=>{const b=h('button',{class:'mood-btn',style:'flex-direction:row;padding:4px 12px',onclick:()=>{filter=k;draw()}},k);b.dataset.k=k;tabs.append(b)})}
+  list.append(h('div',{class:'small'},'불러오는 중…'));
+  fetchWritings(STUDENT.name).then(r=>{rows=r||[];if(!rows.length&&!mom)rows=localNotes();draw()})
+    .catch(()=>{rows=mom?[]:localNotes();draw();list.prepend(h('div',{class:'small'},'인터넷이 안 되어 이 기기에 쓴 노트만 보여요.'))});
 }

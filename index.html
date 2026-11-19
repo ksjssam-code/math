@@ -40,6 +40,7 @@ function render(){
     g.append(c);
   });
   app.append(g);
+  if(STUDENT)renderNoteWall(app);
 }
 updateWho();ensureStudent(render);flushLog();
 </script>

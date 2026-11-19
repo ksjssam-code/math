@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>수학 탐구실 · 5학년</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="top"><div class="in">
+  <a class="brand" href="./"><div class="logo">수</div><div><b>수학 탐구실</b><small>서윤 · 서현이의 수학 탐구실</small></div></a>
+  <span id="who" style="margin-left:auto"></span>
+</div></div>
+<main class="wrap" id="app"></main>
+<script>window.UNIT={id:"portal",title:"단원 목록"};</script>
+<script src="config.js"></script>
+<script src="assets/core.js"></script>
+<script>
+/* ===== 단원 목록: 새 단원을 만들면 ready:true 로 바꾸고 폴더(u3, u4 …)를 추가해요 ===== */
+const UNITS=[
+  {id:"u2", grade:"5-1", no:2, title:"약수와 배수", desc:"꽃병·꼬치·개구리 점프로 약수와 배수, 최대공약수와 최소공배수를 발견해요.", color:"var(--coral)", ready:true},
+  {id:"u3", grade:"5-1", no:3, title:"", desc:"곧 열려요", color:"var(--sky)", ready:false},
+  {id:"u4", grade:"5-1", no:4, title:"", desc:"곧 열려요", color:"var(--mint)", ready:false},
+];
+function starsOf(id){try{const s=JSON.parse(localStorage.getItem('math-lab-'+id+'-'+(STUDENT?STUDENT.name:''))||'{}');return Object.keys(s.explore||{}).length+Object.keys(s.concept||{}).length}catch(e){return 0}}
+function render(){
+  const app=document.getElementById('app');app.innerHTML='';
+  app.append(h('section',{class:'hero',style:'grid-template-columns:1fr'},h('div',{},
+    h('span',{class:'pill'},'5학년 수학'),
+    h('h1',{html:'외우기 전에 <em>직접 해 보고</em><br>규칙을 발견해요'}),
+    h('p',{},'단원을 골라 탐구를 시작하세요. 탐구 → 개념 → 기본 → 심화 → 서술형 순서로 나아가요.'))));
+  const g=h('div',{class:'grid g3'});
+  UNITS.forEach(U=>{
+    const c=h('div',{class:'card step-card unit-card'+(U.ready?'':' locked'),onclick:()=>{if(U.ready)location.href=U.id+'/'}});
+    c.style.setProperty('--c',U.color);
+    c.innerHTML=`<span class="no">${U.grade} · ${U.no}단원</span><h3>${U.title||'준비 중'}</h3><p>${U.desc}</p>`+(U.ready?`<div class="small" style="margin-top:8px">획득한 탐구·개념 별: ${starsOf(U.id)}개</div>`:'<div class="small" style="margin-top:8px">🔒 준비 중</div>');
+    g.append(c);
+  });
+  app.append(g);
+}
+updateWho();ensureStudent(render);flushLog();
+</script>
+</body>
+</html>

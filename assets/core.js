@@ -41,6 +41,8 @@ function readQ(){try{return JSON.parse(localStorage.getItem(Q_KEY))||[]}catch(e)
 function writeQ(q){memQueue=q;try{localStorage.setItem(Q_KEY,JSON.stringify(q))}catch(e){}}
 function logEvent(type,data={}){
   const C=window.MATHLAB_CONFIG||{};if(!C.sheetUrl)return;
+  if(isMom()&&type!=='security')return;
+  if(['note','letter','mood'].includes(type)&&!data.id)data.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   const ev=Object.assign({time:new Date().toISOString(),unit:(window.UNIT&&UNIT.title)||'',name:STUDENT?(STUDENT.name||''):'',page:(location.hash||'#home').slice(1),type},data);
   const q=readQ();q.push(ev);writeQ(q.slice(-500));
   clearTimeout(logEvent._t);logEvent._t=setTimeout(flushLog,1200);
@@ -65,13 +67,15 @@ function deviceStr(){
   const br=/SamsungBrowser/.test(u)?'삼성 인터넷':/Whale/.test(u)?'웨일':/Edg\//.test(u)?'엣지':/CriOS|Chrome/.test(u)?'크롬':/Safari/.test(u)?'사파리':'기타';
   return `기기 #${id} · ${os} · ${br}`;
 }
-function kidOf(name){return ((window.MATHLAB_CONFIG||{}).kids||[]).find(k=>k.name===name)}
-function isUnlocked(name){const k=kidOf(name);if(!k)return false;if(!k.passHash)return true;try{return localStorage.getItem(UNLOCK_KEY+name)===k.passHash}catch(e){return UNLOCK_MEM[name]===k.passHash}}
+function kidOf(name){const C=window.MATHLAB_CONFIG||{};if(C.mom&&name===C.mom.name)return C.mom;return (C.kids||[]).find(k=>k.name===name)}
+function isMom(){return !!(STUDENT&&STUDENT.mom)}
+function readKey(name){try{return localStorage.getItem('math-lab-key-'+name)||''}catch(e){return UNLOCK_MEM['key-'+name]||''}}
+function isUnlocked(name){const k=kidOf(name);if(!k)return false;if(!k.passHash)return !k.isMom;try{return localStorage.getItem(UNLOCK_KEY+name)===k.passHash}catch(e){return UNLOCK_MEM[name]===k.passHash}}
 function askPass(kid,onOk,onCancel){
   const inp=h('input',{class:'ans',type:'password',placeholder:'내 비밀번호',style:'width:180px',autocomplete:'off'});const err=h('div',{class:'small',style:'color:var(--bad);min-height:20px'});
   let fails=0;
-  const go=async()=>{const hv=await sha256(inp.value.trim());
-    if(hv===kid.passHash){logEvent('security',{name:kid.name,tag:'비밀번호 통과',ok:'O',answer:deviceStr()});UNLOCK_MEM[kid.name]=hv;try{localStorage.setItem(UNLOCK_KEY+kid.name,hv)}catch(e){}ov.remove();onOk()}
+  const go=async()=>{const pw=inp.value.trim();const hv=await sha256(pw);
+    if(hv===kid.passHash){const rk=await sha256('read:'+pw);UNLOCK_MEM['key-'+kid.name]=rk;try{localStorage.setItem('math-lab-key-'+kid.name,rk)}catch(e){}logEvent('security',{name:kid.name,tag:'비밀번호 통과',ok:'O',answer:deviceStr()});UNLOCK_MEM[kid.name]=hv;try{localStorage.setItem(UNLOCK_KEY+kid.name,hv)}catch(e){}ov.remove();onOk()}
     else{fails++;logEvent('security',{name:kid.name,tag:'비밀번호 틀림',ok:'X',answer:deviceStr()});flushLog();inp.value='';inp.focus();
       if(fails>=5){err.textContent='여러 번 틀렸어요. 30초 뒤에 다시 해 보세요.';inp.disabled=true;setTimeout(()=>{inp.disabled=false;fails=0;err.textContent='';inp.focus()},30000)}
       else err.textContent='비밀번호가 달라요.'}};
@@ -88,17 +92,20 @@ function ensureStudent(cb,force){
   const ov=h('div',{class:'overlay',style:'background:var(--bg)'},h('div',{class:'card',style:'max-width:420px;width:92%;text-align:center'},
     h('h2',{style:'margin:0 0 6px'},'누가 공부할까요? 👋'),h('p',{class:'small',style:'margin:0 0 16px'},'내 이름을 누르고 내 비밀번호를 입력해요.'),
     h('div',{class:'row',style:'justify-content:center;gap:14px'},...kids.map(k=>h('button',{class:'kid-btn',style:`--c:${k.color||'var(--coral)'}`,onclick:()=>{
-      const done=()=>{STUDENT={name:k.name};try{localStorage.setItem(STU_KEY,JSON.stringify(STUDENT))}catch(e){}
+      const done=()=>{STUDENT=k.isMom?{name:k.name,mom:true}:{name:k.name};try{localStorage.setItem(STU_KEY,JSON.stringify(STUDENT))}catch(e){}
         if(force){location.reload();return}updateWho();logEvent('login',{answer:deviceStr()});afterLogin(cb)};
       ov.remove();
       if(isUnlocked(k.name))done();else askPass(k,done,()=>ensureStudent(cb,force));
-    }},h('span',{style:'font-size:40px'},k.emoji||'🙂'),h('b',{},k.name))))));
+    }},h('span',{style:'font-size:40px'},k.emoji||'🙂'),h('b',{},k.name)))),
+    (C.mom&&C.mom.passHash)?h('button',{class:'mom-link',onclick:()=>{ov.remove();const m=Object.assign({isMom:true},C.mom);const done=()=>{STUDENT={name:m.name,mom:true};try{localStorage.setItem(STU_KEY,JSON.stringify(STUDENT))}catch(e){}location.reload()};if(isUnlocked(m.name))done();else askPass(m,done,()=>ensureStudent(cb,force))}},'엄마'):''));
   document.body.append(ov);
 }
 const MOODS=[['😆','신나요'],['🙂','좋아요'],['😐','그저 그래요'],['😢','속상해요'],['😠','화나요'],['😴','피곤해요']];
 function todayStr(){const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()}
 function afterLogin(cb){
   cb&&cb();addLetterButton();
+  if(isMom()){if(!document.getElementById('mom-bar'))document.body.prepend(h('div',{id:'mom-bar',class:'mom-bar'},'👩 엄마 모드 · 아이 화면과 똑같이 보이고, 기록은 남지 않아요 · ',h('button',{onclick:openMomInbox},'📬 아이들 글 보기')));return}
+  checkReplies();
   try{if(!sessionStorage.getItem('math-lab-visit-'+STUDENT.name)){sessionStorage.setItem('math-lab-visit-'+STUDENT.name,'1');logEvent('visit',{answer:deviceStr()})}}catch(e){}
   const k='math-lab-mood-'+(STUDENT&&STUDENT.name);let last='';try{last=localStorage.getItem(k)}catch(e){}
   if(last===todayStr())return;
@@ -115,34 +122,41 @@ function afterLogin(cb){
 }
 function addLetterButton(){
   if(document.getElementById('letter-fab'))return;
-  document.body.append(h('button',{id:'letter-fab',class:'letter-fab',title:'마음 우체통',onclick:openLetter},'📮'));
+  document.body.append(h('button',{id:'letter-fab',class:'letter-fab',title:isMom()?'아이들 글 보기':'마음 우체통',onclick:()=>isMom()?openMomInbox():openLetter()},isMom()?'📬':'📮',h('span',{id:'fab-badge',class:'fab-badge hide'})));
 }
-function openLetter(){
+function openLetter(startMode){
   const MODES={
     letter:{icon:'💌',title:'엄마에게 편지',info:'엄마에게 전달돼요.',ph:'고마운 일, 속상한 일, 갖고 싶은 것, 하고 싶은 말… 뭐든지 좋아요.',send:true},
     ask:{icon:'❓',title:'궁금해요',info:'엄마에게 전달돼요. 수학이든 뭐든 궁금한 걸 물어보세요.',ph:'예) 0은 모든 수의 배수인가요? / 최소공배수는 어디에 써요?',send:true},
     diary:{icon:'📔',title:'나만의 일기',info:'🔒 이 기기에만 저장되고 아무에게도 보내지 않아요.',ph:'오늘 하루는 어땠나요?',send:false},
+    reply:{icon:'💬',title:'엄마 답장',info:'엄마가 내 글에 단 답장이에요.',ph:'',send:false,read:true},
   };
   let mode='letter';
   const tabs=h('div',{class:'row',style:'margin-bottom:10px'});const info=h('p',{class:'small',style:'margin:0 0 8px'});
   const ta=h('textarea',{class:'note',style:'min-height:160px'});const fb=h('div',{class:'small',style:'min-height:20px'});const past=h('div');
   const dkey=()=>'math-lab-diary-'+STUDENT.name;
-  function setMode(m){mode=m;const M2=MODES[m];[...tabs.children].forEach(t=>t.classList.toggle('sel',t.dataset.m===m));info.textContent=M2.info;ta.placeholder=M2.ph;fb.textContent='';
+  function setMode(m){mode=m;const M2=MODES[m];ta.style.display=M2.read?'none':'';sendBtn.style.display=M2.read?'none':'';
+    [...tabs.children].forEach(t=>t.classList.toggle('sel',t.dataset.m===m));info.textContent=M2.info;fb.textContent='';
+    if(M2.read){past.innerHTML='<div class="small">불러오는 중…</div>';fetchWritings(STUDENT.name).then(rows=>{past.innerHTML='';const rs=(rows||[]).filter(r=>r.reply);markRepliesSeen(rs);
+      if(!rs.length){past.append(h('div',{class:'cond'},'아직 답장이 없어요. 엄마에게 편지를 보내 보세요!'));return}
+      rs.forEach(r=>past.append(h('div',{class:'cond'},h('div',{class:'small'},`${fmtTime(r.time)} · ${r.kind}`),h('div',{style:'white-space:pre-wrap;color:var(--sub)'},r.text),h('div',{class:'reply-bubble'},'👩 ',r.reply))))}).catch(()=>{past.innerHTML='<div class="small">답장을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</div>'});return}[...tabs.children].forEach(t=>t.classList.toggle('sel',t.dataset.m===m));info.textContent=M2.info;ta.placeholder=M2.ph;fb.textContent='';
     past.innerHTML='';if(m==='diary'){let arr=[];try{arr=JSON.parse(localStorage.getItem(dkey())||'[]')}catch(e){}
       if(arr.length)past.append(h('div',{class:'jua',style:'margin-top:10px'},'지난 일기'),...arr.slice().reverse().slice(0,10).map(x=>h('div',{class:'cond'},h('div',{class:'small'},new Date(x.t).toLocaleDateString('ko-KR')),h('div',{style:'white-space:pre-wrap'},x.v))))}}
   Object.entries(MODES).forEach(([k,v])=>{const b=h('button',{class:'mood-btn',style:'flex-direction:row;gap:6px;padding:6px 12px',onclick:()=>setMode(k)},h('span',{},v.icon),h('span',{},v.title));b.dataset.m=k;tabs.append(b)});
+  const sendBtn=h('button',{class:'btn coral',onclick:()=>doSend()},'보내기 / 저장');
   const ov=h('div',{class:'overlay'},h('div',{class:'card',style:'max-width:540px;width:92%;max-height:90vh;overflow:auto'},
     h('h2',{style:'margin:0 0 8px'},'📮 마음 우체통'),tabs,info,ta,fb,
-    h('div',{class:'row',style:'margin-top:10px'},h('button',{class:'btn coral',onclick:()=>{
+    h('div',{class:'row',style:'margin-top:10px'},sendBtn,h('button',{class:'btn ghost',onclick:()=>ov.remove()},'닫기')),past));
+  document.body.append(ov);setMode(startMode||'letter');ta.focus();
+  function doSend(){
       const v=ta.value.trim();if(!v){fb.textContent='한 글자라도 써 볼까요?';return}
       const M2=MODES[mode];
       if(M2.send){logEvent('letter',{tag:M2.title,answer:v});flushLog();ov.remove();toast(`${M2.icon} 엄마에게 보냈어요`)}
       else{try{const arr=JSON.parse(localStorage.getItem(dkey())||'[]');arr.push({t:new Date().toISOString(),v});localStorage.setItem(dkey(),JSON.stringify(arr.slice(-200)))}catch(e){}ta.value='';fb.textContent='📔 일기를 저장했어요.';setMode('diary')}
-    }},'보내기 / 저장'),h('button',{class:'btn ghost',onclick:()=>ov.remove()},'닫기')),past));
-  document.body.append(ov);setMode('letter');ta.focus();
+      }
 }
 
-function updateWho(){const w=document.getElementById('who');if(w){w.innerHTML='';if(STUDENT)w.append(h('button',{class:'who-btn',title:'다른 사람으로 바꾸기',onclick:()=>ensureStudent(null,true)},'🙂 '+studentLabel()+' · 바꾸기'))}}
+function updateWho(){const w=document.getElementById('who');if(w){w.innerHTML='';if(STUDENT)w.append(h('button',{class:'who-btn',title:'다른 사람으로 바꾸기',onclick:()=>ensureStudent(null,true)},(isMom()?'👩 ':'🙂 ')+studentLabel()+' · 바꾸기'))}}
 
 function solvedCount(prefix){return Object.keys(S.solved).filter(k=>k.startsWith(prefix)).length}
 
@@ -309,3 +323,51 @@ const G = {
   ],
 };
 
+
+
+/* ============================================================
+   엄마 답장 · 엄마 모드
+   ============================================================ */
+function fmtTime(t){try{const d=new Date(t);return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`}catch(e){return ''}}
+function fetchWritings(who){
+  const C=window.MATHLAB_CONFIG||{};const key=readKey(who);
+  if(!C.sheetUrl||!key)return Promise.resolve([]);
+  return fetch(`${C.sheetUrl}?who=${encodeURIComponent(who)}&key=${key}&t=${Date.now()}`).then(r=>r.json()).then(j=>j.ok?j.rows:Promise.reject(j.error));
+}
+function seenKey(){return 'math-lab-seen-'+(STUDENT?STUDENT.name:'')}
+function markRepliesSeen(rows){try{localStorage.setItem(seenKey(),JSON.stringify(rows.map(r=>r.id+'|'+r.reply)))}catch(e){};const b=document.getElementById('fab-badge');if(b)b.classList.add('hide')}
+function checkReplies(){
+  fetchWritings(STUDENT.name).then(rows=>{let seen=[];try{seen=JSON.parse(localStorage.getItem(seenKey())||'[]')}catch(e){}
+    const n=(rows||[]).filter(r=>r.reply&&!seen.includes(r.id+'|'+r.reply)).length;
+    const b=document.getElementById('fab-badge');if(b&&n){b.textContent=n;b.classList.remove('hide');toast(`💬 엄마 답장이 ${n}개 왔어요! 📮를 눌러 보세요`)}
+  }).catch(()=>{});
+}
+function sendReply(id,text){
+  const C=window.MATHLAB_CONFIG||{};
+  return fetch(C.sheetUrl,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({who:STUDENT.name,key:readKey(STUDENT.name),events:[{type:'reply',id,answer:text,time:new Date().toISOString(),name:STUDENT.name}]})});
+}
+function openMomInbox(){
+  let filter='전체',rows=[];
+  const list=h('div');const tabs=h('div',{class:'row',style:'margin:8px 0'});
+  const kids=['전체',...((window.MATHLAB_CONFIG||{}).kids||[]).map(k=>k.name)];
+  kids.forEach(k=>{const b=h('button',{class:'mood-btn',style:'flex-direction:row;padding:6px 14px',onclick:()=>{filter=k;draw()}},k);b.dataset.k=k;tabs.append(b)});
+  function draw(){
+    [...tabs.children].forEach(t=>t.classList.toggle('sel',t.dataset.k===filter));list.innerHTML='';
+    const rs=rows.filter(r=>filter==='전체'||r.name===filter);
+    if(!rs.length){list.append(h('div',{class:'cond'},'아직 글이 없어요.'));return}
+    rs.forEach(r=>{
+      const ta=h('textarea',{class:'note',style:'min-height:60px',placeholder:`${r.name}에게 답장 쓰기…`});ta.value=r.reply||'';
+      const st=h('span',{class:'small'});
+      const btn=h('button',{class:'btn small coral',onclick:()=>{const v=ta.value.trim();if(!v)return;btn.disabled=true;st.textContent='보내는 중…';
+        sendReply(r.id,v).then(()=>{r.reply=v;st.textContent='✔ 보냈어요. 아이가 다음에 들어오면 알림이 떠요.';btn.disabled=false}).catch(()=>{st.textContent='보내지 못했어요. 다시 눌러 주세요.';btn.disabled=false})}},r.reply?'답장 고치기':'답장 보내기');
+      list.append(h('div',{class:'prob'},h('div',{class:'small'},`${r.name} · ${fmtTime(r.time)} · ${r.kind}${r.topic?' · '+r.topic:''}`),
+        h('div',{style:'white-space:pre-wrap;margin:6px 0 10px'},r.text||''),ta,h('div',{class:'row',style:'margin-top:6px'},btn,st)));
+    });
+  }
+  const ov=h('div',{class:'overlay'},h('div',{class:'card',style:'max-width:680px;width:94%;max-height:92vh;overflow:auto'},
+    h('div',{class:'row',style:'justify-content:space-between'},h('h2',{style:'margin:0'},'📬 아이들 글'),h('button',{class:'btn ghost small',onclick:()=>ov.remove()},'닫기')),
+    h('p',{class:'small',style:'margin:4px 0'},'편지, 궁금해요, 오늘 기분, 발견 노트, 서술형 풀이가 모여요. 나만의 일기는 아이 기기에만 있어서 여기 오지 않아요.'),tabs,list));
+  document.body.append(ov);
+  list.append(h('div',{class:'small'},'불러오는 중…'));
+  fetchWritings(STUDENT.name).then(r=>{rows=r||[];draw()}).catch(e=>{list.innerHTML='';list.append(h('div',{class:'cond'},'글을 불러오지 못했어요. ('+e+')'))});
+}

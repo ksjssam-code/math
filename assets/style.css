@@ -168,3 +168,8 @@ table.t th{background:#F7F1E6;font-weight:400;font-family:Jua}
 .mood-btn.sel{border-color:var(--coral);background:var(--coral-soft)}
 .letter-fab{position:fixed;right:18px;bottom:18px;width:58px;height:58px;border-radius:50%;border:none;background:var(--coral);font-size:28px;box-shadow:0 4px 0 #D85C3D,0 8px 20px rgba(0,0,0,.15);z-index:40}
 .mood-btn.sel{border-color:var(--coral);background:var(--coral-soft)}
+.mom-link{display:block;margin:18px auto 0;border:none;background:none;color:var(--sub);font-size:13px;text-decoration:underline}
+.mom-bar{position:relative;background:var(--grape);color:#fff;text-align:center;padding:6px 10px;font-size:14px}
+.mom-bar button{border:none;background:#fff;color:var(--grape);border-radius:999px;padding:2px 12px;margin-left:6px;font-family:Jua}
+.fab-badge{position:absolute;top:-4px;right:-4px;background:var(--bad);color:#fff;border-radius:999px;font-size:13px;min-width:22px;height:22px;display:grid;place-items:center;font-family:Jua}
+.reply-bubble{margin-top:8px;background:var(--grape-soft);color:#3E2490;border-radius:12px 12px 12px 2px;padding:8px 12px;white-space:pre-wrap}

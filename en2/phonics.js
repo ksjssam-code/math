@@ -266,6 +266,115 @@ function review(U, done) {
   return G1.match(ws.map(w => [pic(w), w]), done, '🃏 그림과 단어 짝 맞추기 — 같은 것끼리 찾아요!');
 }
 
+/* ---------------- 글자 쓰기 (화면 자판) ---------------- */
+EN.activeTyper = null;
+document.addEventListener('keydown', e => { const t = EN.activeTyper; if (!t || !document.body.contains(t.el)) return; if (/^[a-zA-Z]$/.test(e.key)) { t.key(e.key.toLowerCase()); e.preventDefault(); } else if (e.key === 'Backspace') { t.key('⌫'); e.preventDefault(); } });
+function typer(word, opt = {}) {
+  const pre = opt.prefix || ''; const need = word.slice(pre.length).toLowerCase(); let typed = []; let done = false;
+  const el = h('div', {class: 'en-typer'}); const slots = h('div', {class: 'en-slots'}); const fb = h('div', {class: 'g1-fb'});
+  const draw = () => { slots.innerHTML = ''; pre.split('').forEach(c => slots.append(h('span', {class: 'en-slot given'}, c))); for (let i = 0; i < need.length; i++) slots.append(h('span', {class: 'en-slot' + (typed[i] ? ' full' : '') + (i === typed.length && !done ? ' cur' : '')}, typed[i] || '')); };
+  const kb = h('div', {class: 'en-kb'});
+  'abcdefghijklmnopqrstuvwxyz'.split('').concat(['⌫']).forEach(c => kb.append(h('button', {class: 'en-key' + (c === '⌫' ? ' del' : ''), onclick: () => api.key(c)}, c)));
+  const api = {el, key(c) {
+    if (done) return; EN.activeTyper = api;
+    if (c === '⌫') typed.pop(); else if (typed.length < need.length) typed.push(c);
+    draw(); if (typed.length === need.length) check();
+  }};
+  function check() {
+    const ok = typed.join('') === need;
+    logEvent('attempt', {tag: opt.tag || '철자 쓰기', q: opt.q || word, ok: ok ? 'O' : 'X', answer: pre + typed.join('')});
+    if (ok) { done = true; el.classList.add('done'); fb.className = 'g1-fb good'; fb.textContent = G1.pick(['Great! 🎉', 'Good job! 🌟', 'Perfect! 👏']); G1.tone(true); EN.speak(word); kb.remove(); opt.onDone && opt.onDone(); }
+    else { fb.className = 'g1-fb bad'; fb.innerHTML = '다시 써 볼까요? ' + (opt.hintSound !== false ? '🔊 를 눌러 소리를 들어 봐요.' : ''); G1.tone(false); el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); setTimeout(() => { typed = []; draw(); }, 700); }
+  }
+  el.append(slots, kb, fb); draw(); EN.activeTyper = api; el.addEventListener('click', () => EN.activeTyper = api);
+  return api;
+}
+function stepRunner(steps, onDone, intro) {
+  const root = h('div'); const prog = h('div', {class: 'g1-progress'}); const slot = h('div'); let i = 0;
+  const draw = () => { prog.innerHTML = ''; steps.forEach((_, k) => prog.append(h('span', {class: k < i ? 'on' : ''}, k < i ? '⭐' : '☆'))); };
+  function show() { draw(); slot.innerHTML = ''; if (i >= steps.length) { slot.append(h('div', {class: 'g1-big', style: 'text-align:center;margin:16px 0'}, '📝 학습지 완료! 🎉')); onDone && onDone(); return; }
+    slot.append(steps[i](() => { i++; if (!S.solved['en-ws-' + i + location.hash]) { markSolved('en-ws-' + i + location.hash); G1.giveSticker(); } setTimeout(show, 1000); })); }
+  if (intro) root.append(G1.say(intro));
+  root.append(prog, slot); show(); return root;
+}
+
+/* ---------------- 📝 Worksheet (학습지 1·2) ---------------- */
+function worksheet(U, done) {
+  const keys = Object.keys(U.fam);
+  const ws1 = SH(allWords(U)).slice(0, 6).map(w => next => {
+    const card = h('div', {class: 'g1-prob'});
+    const r = rimeOf(U, w);
+    const head = h('div', {class: 'g1-row', style: 'gap:16px;flex-wrap:wrap;align-items:center'}, h('span', {style: 'font-size:64px'}, pic(w)), EN.btn(w, '🔊'));
+    card.append(h('div', {class: 'en-ws-t'}, U.se ? '1 · Listen, circle and write. 어떤 소리가 들어 있나요? 고르고 단어를 써요.' : '1 · Circle and write. 끝소리를 고르고 단어를 써요.'), head);
+    const pick = h('div', {class: 'g1-row', style: 'gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0'});
+    if (!U.se) pick.append(h('span', {class: 'en-opt', style: 'font-size:44px'}, onset(w)));
+    const write = h('div');
+    keys.forEach(k => { const b = h('button', {class: 'g1-choice', onclick: () => {
+      if (k === r) { b.classList.add('ok'); [...pick.querySelectorAll('.g1-choice')].forEach(x => x.disabled = true); G1.tone(true); write.append(h('div', {class: 'small', style: 'margin-top:6px'}, '이제 단어를 써 보세요 ✏️'), typer(w, {tag: `${U.title} 학습지 1`, q: w, onDone: next}).el); }
+      else { b.classList.add('no'); G1.tone(false); logEvent('attempt', {tag: `${U.title} 학습지 1 고르기`, q: w, ok: 'X', answer: k}); }
+    }}, h('span', {class: 'en-opt'}, U.se ? k : k)); pick.append(b); });
+    card.append(pick, write); if (!U.se) setTimeout(() => {}, 0); return card;
+  });
+  const ws2 = SH(U.sent).slice(0, 4).map(([sent, a]) => next => {
+    const card = h('div', {class: 'g1-prob'});
+    card.append(h('div', {class: 'en-ws-t'}, '2 · Look and write. 그림을 보고 빈칸에 알맞은 단어를 써요.'),
+      h('div', {class: 'g1-row', style: 'gap:14px;flex-wrap:wrap;align-items:center'}, h('span', {style: 'font-size:64px'}, pic(a)), h('span', {class: 'en-sent', html: sent.replace('___', '<u>&nbsp;&nbsp;?&nbsp;&nbsp;</u>')})),
+      h('div', {style: 'margin:6px 0'}, EN.btn(a, '🔊 단어 소리 힌트')),
+      typer(a, {tag: `${U.title} 학습지 2`, q: sent, onDone: next}).el);
+    return card;
+  });
+  return stepRunner([...ws1, ...ws2], done, '책 학습지처럼 <b>고르고, 직접 써요</b>. 화면 자판이나 키보드로 글자를 입력해요.');
+}
+
+/* ---------------- Review 1 · 2 ---------------- */
+const REVIEWS = [
+  {id: 'R1', title: 'Review 1', sub: 'Unit 1 ~ 5', units: [1, 2, 3, 4, 5], color: '#FF7A59',
+    look: ['net', 'pig', 'map', 'bat', 'hat', 'pin', 'lip', 'pen', 'jam', 'rib', 'pan', 'bed'],
+    bank: ['bat', 'cat', 'fan', 'ham', 'hen', 'kid', 'man', 'six', 'vet', 'wig'],
+    title2: 'At the Park',
+    passage: ['The {kid} with the {wig} has a {bat}.', 'The {man} with the hat has {ham} in a pan.', 'The {vet} has {six} pets and a red {hen}.', 'Oh! The {cat} naps by the {fan}.']},
+  {id: 'R2', title: 'Review 2', sub: 'Unit 6 ~ 8', units: [6, 7, 8], color: '#8A5CF6',
+    look: ['tub', 'hop', 'fox', 'pot', 'cop', 'bun', 'hug', 'fun', 'dog', 'cup', 'nut', 'bud'],
+    bank: ['bud', 'bug', 'dog', 'fox', 'hut', 'log', 'mud', 'nut', 'rug'],
+    title2: 'Who Is in the Mud?',
+    passage: ['The {bug} sits on a red {rug}.', 'The {fox} naps in the {hut}.', 'The pup has a {nut} and a {bud}.', 'Where is the {dog}? Oh! The dog is in the {mud} by the {log}!']},
+];
+function reviewPage(RV) {
+  app.append(h('section', {class: 'lesson-head'}, h('div', {class: 'kicker', style: `color:${RV.color}`}, `📝 ${RV.sub} 복습`), h('h1', {}, RV.title)));
+  const key = k => `en-${RV.id}-${k}`;
+  const star = (k, label) => { if (!S.explore[key(k)]) { S.explore[key(k)] = 1; save(); toast(`⭐ ${RV.title} ${label} 완료!`); logEvent('star', {tag: `${RV.title} ${label}`, q: 'Smart Phonics 2'}); } };
+  // A. Look and write (첫 글자가 주어져요)
+  app.append(h('h2', {style: 'margin:10px 0 4px'}, 'A · Look and write'), G1.say('그림을 보고 첫 글자 다음에 오는 글자를 써요. 모르면 🔊 를 눌러요.'));
+  app.append(stepRunner(SH(RV.look).map(w => next => { const c = h('div', {class: 'g1-prob'}); c.append(h('div', {class: 'g1-row', style: 'gap:16px;align-items:center'}, h('span', {style: 'font-size:64px'}, pic(w)), EN.btn(w, '🔊')), typer(w, {prefix: w[0], tag: `${RV.title} Look and write`, q: w, onDone: next}).el); return c; }), () => star('a', 'Look and write')));
+  // B. Listen and fill
+  app.append(h('h2', {style: 'margin:28px 0 4px'}, 'B · Listen and fill in the blanks'));
+  app.append(G1.say('▶ 를 눌러 이야기를 듣고, 빈칸을 누른 다음 아래 단어 상자에서 알맞은 단어를 골라요.'));
+  const box = h('div', {class: 'en-story'}); app.append(box);
+  const full = RV.passage.map(l => l.replace(/[{}]/g, '')).join(' ');
+  box.append(h('div', {class: 'g1-row', style: 'gap:10px;align-items:center;flex-wrap:wrap'}, h('span', {class: 'en-story-t'}, RV.title2), h('button', {class: 'en-play big', onclick: () => EN.seq(RV.passage.map(l => l.replace(/[{}]/g, '')), 500)}, '▶ 이야기 듣기')));
+  const blanks = []; let cur = null;
+  RV.passage.forEach(l => {
+    const line = h('div', {class: 'en-sent', style: 'margin:8px 0;font-size:24px'});
+    l.split(/(\{[a-z]+\})/).forEach(part => {
+      const m = part.match(/^\{([a-z]+)\}$/);
+      if (m) { const b = h('button', {class: 'en-blank', onclick: () => { cur = b; blanks.forEach(x => x.el.classList.remove('cur')); b.classList.add('cur'); }}, '      '); blanks.push({el: b, ans: m[1], val: ''}); line.append(b); }
+      else line.append(part);
+    });
+    box.append(line);
+  });
+  const bank = h('div', {class: 'g1-row', style: 'gap:8px;flex-wrap:wrap;margin:12px 0'});
+  RV.bank.forEach(w => bank.append(h('button', {class: 'g1-chip', onclick: () => { const t = cur || (blanks.find(x => !x.val) || {}).el; if (!t) return; const B = blanks.find(x => x.el === t); B.val = w; t.textContent = w; t.classList.remove('no', 'ok'); EN.speak(w); const nx = blanks.find(x => !x.val); cur = nx ? nx.el : null; blanks.forEach(x => x.el.classList.toggle('cur', x.el === cur)); }}, w)));
+  const fb = h('div', {class: 'g1-fb'});
+  box.append(h('div', {class: 'small'}, '단어 상자 (한 단어는 남을 수도 있어요)'), bank,
+    h('button', {class: 'g1-btn', onclick: () => {
+      let n = 0; blanks.forEach(B => { const ok = B.val === B.ans; B.el.classList.toggle('ok', ok); B.el.classList.toggle('no', !ok); if (ok) n++; });
+      logEvent('score', {tag: `${RV.title} Listen and fill`, q: RV.title2, ok: n === blanks.length ? 'O' : 'X', answer: `${n}/${blanks.length}`});
+      fb.className = 'g1-fb ' + (n === blanks.length ? 'good' : 'bad'); fb.textContent = n === blanks.length ? `🎉 ${n} / ${blanks.length} 모두 맞았어요!` : `${n} / ${blanks.length} 맞았어요. 빨간 빈칸을 다시 골라 봐요.`;
+      if (n === blanks.length) { G1.tone(true); star('b', 'Listen and fill'); } else G1.tone(false);
+    }}, '채점하기 ✔'), fb);
+  blanks[0] && (cur = blanks[0].el, blanks[0].el.classList.add('cur'));
+}
+
 /* ============================================================
    화면
    ============================================================ */
@@ -274,23 +383,27 @@ const PARTS = [
   {k: 'practice', n: '2 Practice', d: '듣고 고르기', f: practice},
   {k: 'more', n: '3 Practice More', d: '스스로 읽기', f: practiceMore},
   {k: 'story', n: '4 Story & Write', d: '이야기 읽고 철자 쓰기', f: storyWrite},
-  {k: 'review', n: '🎮 Review', d: '짝 맞추기 놀이', f: review},
+  {k: 'ws', n: '📝 Worksheet', d: '학습지: 고르고 직접 쓰기', f: worksheet},
+  {k: 'review', n: '🎮 Game', d: '짝 맞추기 놀이', f: review},
 ];
 const app = document.getElementById('app');
 const got = (U, k) => !!(S.explore[enKey(U, k)]);
 function giveStar(U, k, label) { if (!S.explore[enKey(U, k)]) { S.explore[enKey(U, k)] = 1; save(); toast(`⭐ ${label} 완료!`); logEvent('star', {tag: `Unit ${U.no} ${label}`, q: 'Smart Phonics 2'}); } }
 function home() {
-  const total = UNITS.reduce((s, U) => s + PARTS.filter(p => got(U, p.k)).length, 0);
+  const total = UNITS.reduce((s, U) => s + PARTS.filter(p => got(U, p.k)).length, 0) + REVIEWS.reduce((s, RV) => s + ['a', 'b'].filter(k => S.explore[`en-${RV.id}-${k}`]).length, 0);
   app.append(h('section', {class: 'lesson-head'}, h('div', {class: 'kicker'}, 'English · Smart Phonics 2'), h('h1', {}, '짧은 모음 a · e · i · o · u'),
     G1.say('단원을 골라요. <b>Learn → Practice → Practice More → Story & Write</b> 순서로 하면 좋아요. 영어 소리는 🔊 를 눌러 들어요.'),
-    h('div', {class: 'g1-row', style: 'gap:12px;margin-top:6px'}, h('span', {class: 'big-num'}, `⭐ ${total} / ${UNITS.length * PARTS.length}`), h('span', {class: 'small'}, `스티커 ${(S.stickers || []).length}개`), EN.btn('Hello! Let\'s learn phonics!', '🔊 소리 확인'))));
+    h('div', {class: 'g1-row', style: 'gap:12px;margin-top:6px'}, h('span', {class: 'big-num'}, `⭐ ${total} / ${UNITS.length * PARTS.length + REVIEWS.length * 2}`), h('span', {class: 'small'}, `스티커 ${(S.stickers || []).length}개`), EN.btn('Hello! Let\'s learn phonics!', '🔊 소리 확인'))));
   const g = h('div', {class: 'g1-map'});
   const g2 = h('div', {class: 'g1-map'});
   UNITS.forEach(U => (U.se ? g2 : g).append(h('div', {class: 'g1-mapcard', style: `border-color:${U.color}55`, onclick: () => location.hash = 'U' + U.no},
     h('div', {class: 'em'}, U.em), h('div', {class: 'small'}, U.se ? 'Sound Expansion' : `Unit ${U.no} · short ${U.vowel}`), h('h3', {style: `color:${U.color}`}, U.title),
     h('div', {class: 'small'}, allWords(U).join(' · ')),
     h('div', {class: 'st', html: PARTS.map(p => `<span class="${got(U, p.k) ? 'on' : ''}">★</span>`).join('')}))));
-  app.append(g, h('h2', {style: 'margin:28px 0 4px'}, '🎧 Sound Expansion (소리 넓히기)'), h('div', {class: 'small', style: 'margin-bottom:10px'}, '단모음을 다 익히면 도전해요. 두 글자가 함께 내는 소리, 소리 나지 않는 글자를 배워요.'), g2);
+  const rg = h('div', {class: 'g1-map'});
+  REVIEWS.forEach(RV => rg.append(h('div', {class: 'g1-mapcard', style: `border-color:${RV.color}55`, onclick: () => location.hash = RV.id}, h('div', {class: 'em'}, '📝'), h('div', {class: 'small'}, RV.sub), h('h3', {style: `color:${RV.color}`}, RV.title), h('div', {class: 'small'}, 'Look and write · Listen and fill'),
+    h('div', {class: 'st', html: ['a', 'b'].map(k => `<span class="${S.explore['en-' + RV.id + '-' + k] ? 'on' : ''}">★</span>`).join('')}))));
+  app.append(g, h('h2', {style: 'margin:28px 0 4px'}, '📝 Review (복습 학습지)'), rg, h('h2', {style: 'margin:28px 0 4px'}, '🎧 Sound Expansion (소리 넓히기)'), h('div', {class: 'small', style: 'margin-bottom:10px'}, '단모음을 다 익히면 도전해요. 두 글자가 함께 내는 소리, 소리 나지 않는 글자를 배워요.'), g2);
 }
 function unit(U) {
   app.append(h('section', {class: 'lesson-head'}, h('div', {class: 'kicker', style: `color:${U.color}`}, U.se ? `Sound Expansion ${U.em}` : `Unit ${U.no} · short ${U.vowel} ${U.em}`), h('h1', {}, U.title)));
@@ -321,6 +434,7 @@ function route() {
   document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('on', a.dataset.r === r || (r.startsWith('U') && a.dataset.r === 'home')));
   if (r.startsWith('U')) { const U = UNITS.find(x => 'U' + x.no === r); if (U) return unit(U); }
   if (r === 'stickers') return stickers();
+  const RV = REVIEWS.find(x => x.id === r); if (RV) return reviewPage(RV);
   home();
 }
 window.addEventListener('hashchange', route);

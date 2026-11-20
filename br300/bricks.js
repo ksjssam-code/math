@@ -9,6 +9,7 @@ const got = (U, k) => !!S.explore[key(U, k)];
 const PARTS = [
   {k: 'words', n: '🔤 Words', d: '단어 익히기 → 단어 퀴즈'},
   {k: 'check', n: '📚 Reading Check', d: '책을 읽고 이해 확인'},
+  {k: 'grammar', n: '🧩 Grammar', d: '이 단원의 문법 익히기 (6문제)'},
   {k: 'think', n: '✍️ Think & Write', d: '내 생각 쓰기 (엄마에게 전달돼요)'},
   {k: 'test', n: '📝 Unit Test', d: '단원 평가 유형 10문제 (한 번에 맞힌 것만 점수)'},
   {k: 'game', n: '🎮 Word Game', d: '영어-뜻 짝 맞추기'},
@@ -42,6 +43,13 @@ function wordsTab(U, done) {
     grid.append(card);
   });
   root.append(grid);
+  const more = (WL[U.n] || []).filter(([en]) => !U.v.some(w => w[0].toLowerCase() === en.toLowerCase()));
+  if (more.length) {
+    const box = h('details', {class: 'br-more'}, h('summary', {}, `📒 책 단어장의 단어 더 보기 (${more.length}개)`));
+    const mg = h('div', {class: 'br-mini'});
+    more.forEach(([en, ko]) => mg.append(h('div', {class: 'br-minicard'}, h('b', {}, en), h('span', {}, ko), EN.btn(en, '🔊'))));
+    box.append(mg); root.append(box);
+  }
   const quizArea = h('div');
   root.append(h('div', {style: 'text-align:center;margin:16px 0'}, h('button', {class: 'g1-btn', onclick: (e) => { e.target.remove(); quizArea.append(wordQuiz(U, done)); quizArea.scrollIntoView({behavior: 'smooth'}); }}, '📝 단어 퀴즈 시작 (10문제)')), quizArea);
   return root;
@@ -141,7 +149,6 @@ const GRAMMAR = [
   [['Everyone is happy today.', 'Each student has a book.', 'Nobody knows the answer.', 'Both of them are tall.'], 'Every students has a pencil.', 'Every + 단수 명사 → Every student'],
 ];
 function testTab(U, done) {
-  const root = h('div'); let score = 0, idx = 0; const total = 10;
   const items = [];
   const others = (w, n) => SH(U.v.filter(x => x !== w)).slice(0, n);
   // 1. 밑줄 친 부분의 뜻이 올바르지 않은 것
@@ -153,13 +160,21 @@ function testTab(U, done) {
   // 4. 연결어
   (() => { const [t, a] = P(CONNECT); items.push({type: 'mc', q: `다음 빈칸에 들어갈 말로 가장 적절한 것은?<br><span class="br-sent">${t}</span>`, opts: LINKS, ans: LINKS.indexOf(a), sol: t.replace('___', a)}); })();
   // 5-6. 어법
-  SH(GRAMMAR).slice(0, 2).forEach(([ok, bad, why]) => { const opts = SH([...ok, bad]); items.push({type: 'mc', q: '다음 중 어법상 <b>틀린</b> 문장은?', opts, ans: opts.indexOf(bad), sol: why}); });
+  items.push(grItem(U.n - 1));
+  SH(GRAMMAR).slice(0, 1).forEach(([ok, bad, why]) => { const opts = SH([...ok, bad]); items.push({type: 'mc', q: '다음 중 어법상 <b>틀린</b> 문장은?', opts, ans: opts.indexOf(bad), sol: why}); });
   // 7-8. 배열 영작
   SH(U.v.filter(w => w[3].split(' ').length <= 10)).slice(0, 2).forEach(w => items.push({type: 'order', q: `단어를 바르게 배열하여 문장을 완성하시오. <span class="small">(힌트: ${w[0]} = ${w[2]})</span>`, sent: w[3]}));
   // 9. 내용 일치
   (() => { const tf = U.q.filter(q => q[0] === 'TF'); const t = P(tf); items.push({type: 'mc', q: `글의 내용과 일치하면 True, 일치하지 않으면 False를 고르시오.<br><span class="br-sent">${t[1]}</span>`, opts: ['True', 'False'], ans: t[2] ? 0 : 1, sol: '책에서 근거 문장을 찾아 확인해 봐요.'}); })();
   // 10. 영어로 답하기 (스스로 채점)
   (() => { const mc = P(U.q.filter(q => q[0] === 'MC' && !/mostly about/.test(q[1]))); items.push({type: 'open', q: `글의 내용에 맞게 다음 질문에 <b>영어로</b> 답하시오.<br><span class="br-sent">${mc[1]}</span>`, model: mc[2][mc[3]]}); })();
+  return runTest(items, {label: `Unit ${U.n} 단원 평가`, note: `Bricks Unit ${U.n} 단원 평가`, pass: 8, done, again: () => testTab(U, done),
+    intro: '책 단원 평가와 같은 유형을 <b>새로 만든 문제</b>로 풀어요. 한 번에 맞힌 것만 점수가 돼요. 볼 때마다 문제가 바뀌어요!'});
+}
+
+/* 공통 시험 진행기: items = [{type:'mc'|'order'|'open', ...}] */
+function runTest(items, cfg) {
+  const root = h('div'); let score = 0, idx = 0; const total = items.length;
   const prog = h('div', {class: 'g1-progress'}); const slot = h('div'); const head = h('div', {class: 'jua', style: 'font-size:20px'});
   const drawHead = () => { head.textContent = `문제 ${Math.min(idx + 1, total)} / ${total} · 점수 ${score}`; prog.innerHTML = ''; items.forEach((_, k) => prog.append(h('span', {class: k < idx ? 'on' : ''}, k < idx ? '●' : '○'))); };
   const next = () => { idx++; setTimeout(show, 300); };
@@ -172,7 +187,7 @@ function testTab(U, done) {
         if (locked) return; locked = true; const ok = i === it.ans; if (ok) score++;
         e.currentTarget.classList.add(ok ? 'ok' : 'no'); list.children[it.ans].classList.add('ok');
         fb.className = 'g1-fb ' + (ok ? 'good' : 'bad'); fb.innerHTML = (ok ? '정답! ' : '오답. ') + `<span class="small">${it.sol || ''}</span>`; G1.tone(ok);
-        logEvent('attempt', {tag: `Unit ${U.n} 단원 평가`, q: it.q.replace(/<[^>]+>/g, ' ').slice(0, 160), ok: ok ? 'O' : 'X', answer: it.opts[i].replace(/<[^>]+>/g, '')});
+        logEvent('attempt', {tag: cfg.label, q: it.q.replace(/<[^>]+>/g, ' ').slice(0, 160), ok: ok ? 'O' : 'X', answer: it.opts[i].replace(/<[^>]+>/g, '')});
         nx.classList.remove('hide'); drawHead();
       }})));
       c.append(list);
@@ -184,13 +199,13 @@ function testTab(U, done) {
       let done1 = false;
       function chk() { if (done1) return; done1 = true; const ans = picked.map(p => p.w).join(' '); const ok = ans === it.sent; if (ok) score++;
         fb.className = 'g1-fb ' + (ok ? 'good' : 'bad'); fb.innerHTML = ok ? '정답!' : `오답. 바른 문장: <span class="br-sent" style="font-size:18px">${it.sent}</span>`; G1.tone(ok); EN.speak(it.sent);
-        logEvent('attempt', {tag: `Unit ${U.n} 단원 평가 배열`, q: it.sent, ok: ok ? 'O' : 'X', answer: ans}); nx.classList.remove('hide'); drawHead(); }
+        logEvent('attempt', {tag: cfg.label + ' 배열', q: it.sent, ok: ok ? 'O' : 'X', answer: ans}); nx.classList.remove('hide'); drawHead(); }
       c.append(line, pool); draw();
     } else {
       const ta = h('textarea', {class: 'note', style: 'min-height:70px', placeholder: 'Write in English.'});
       const sub = h('button', {class: 'g1-btn', onclick: () => {
         if (ta.value.trim().length < 3) return; sub.remove(); ta.readOnly = true;
-        logEvent('note', {tag: '발견 노트', q: `[Bricks Unit ${U.n} 단원 평가] ${it.q.replace(/<[^>]+>/g, ' ')}`, answer: ta.value.trim()});
+        logEvent('note', {tag: '발견 노트', q: `[${cfg.note}] ${it.q.replace(/<[^>]+>/g, ' ')}`, answer: ta.value.trim()});
         c.append(h('div', {class: 'g1-sol', html: `<b>예시 답</b><br>${it.model}<br><span class="small">내 답이 같은 뜻이면 맞은 거예요. 스스로 채점해요!</span>`}),
           h('div', {class: 'g1-row', style: 'gap:10px;margin-top:8px'}, h('button', {class: 'g1-btn mint', onclick: () => { score++; drawHead(); next(); }}, '⭕ 맞았어요'), h('button', {class: 'g1-btn ghost', onclick: next}, '❌ 다시 볼게요')));
       }}, '답 제출');
@@ -201,25 +216,94 @@ function testTab(U, done) {
   function show() {
     drawHead(); slot.innerHTML = '';
     if (idx >= items.length) {
-      const pass = score >= 8;
+      const pass = score >= cfg.pass;
       slot.append(h('div', {class: 'g1-big', style: 'text-align:center;margin:18px 0'}, `Score ${score} / ${total} ${pass ? '🎉' : '💪'}`),
-        h('div', {style: 'text-align:center'}, pass ? '잘했어요! 8점 이상이면 별을 받아요.' : '8점 이상이면 별을 받아요. 틀린 단어는 Words 탭에서 다시 보고 도전해요!'),
-        h('div', {style: 'text-align:center;margin-top:10px'}, h('button', {class: 'g1-btn', onclick: () => { slot.parentNode.replaceWith(testTab(U, done)); }}, '🔄 새 시험 보기')));
-      logEvent('score', {tag: '전체 채점', q: `Bricks Unit ${U.n} 단원 평가`, ok: pass ? 'O' : 'X', answer: `${score}/${total}`});
-      if (pass) done();
+        h('div', {style: 'text-align:center'}, pass ? `잘했어요! ${cfg.pass}점 이상이면 별을 받아요.` : `${cfg.pass}점 이상이면 별을 받아요. 틀린 문제를 다시 보고 도전해요!`),
+        h('div', {style: 'text-align:center;margin-top:10px'}, h('button', {class: 'g1-btn', onclick: () => { root.replaceWith(cfg.again()); }}, '🔄 새 시험 보기')));
+      logEvent('score', {tag: '전체 채점', q: cfg.note, ok: pass ? 'O' : 'X', answer: `${score}/${total}`});
+      if (pass && cfg.done) cfg.done();
       return;
     }
     slot.append(card(items[idx]));
   }
-  root.append(G1.say('책 단원 평가와 같은 유형을 <b>새로 만든 문제</b>로 풀어요. 한 번에 맞힌 것만 점수가 돼요. 볼 때마다 문제가 바뀌어요!'), head, prog, slot);
+  root.append(G1.say(cfg.intro), head, prog, slot);
   show();
+  return root;
+}
+
+
+/* ---------------- 🧩 Grammar ---------------- */
+function grItem(i, label) {
+  const g = GR[i]; const [sent, opts0] = P(g.items); const opts = SH(opts0);
+  return {type: 'mc', q: `${label ? `<span class="small">[${label}]</span> ` : ''}빈칸에 알맞은 것은?<br><span class="br-sent">${sent.replace('___', '<u>&nbsp;&nbsp;?&nbsp;&nbsp;</u>')}</span>`,
+    opts, ans: opts.indexOf(opts0[0]), sol: `${sent.replace('___', opts0[0])}<br>📌 ${g.t}: ${g.ex}`};
+}
+function grammarTab(U, done) {
+  const g = GR[U.n - 1];
+  const items = SH(g.items).map(([sent, o]) => { const opts = SH(o); return {type: 'mc', q: `빈칸에 알맞은 것은?<br><span class="br-sent">${sent.replace('___', '<u>&nbsp;&nbsp;?&nbsp;&nbsp;</u>')}</span>`, opts, ans: opts.indexOf(o[0]), sol: sent.replace('___', o[0])}; });
+  const root = h('div');
+  root.append(h('div', {class: 'br-gbox'}, h('div', {class: 'kicker'}, '📌 오늘의 문법'), h('h3', {}, g.t), h('p', {}, g.ex),
+    h('div', {class: 'small'}, '책의 Grammar Sheet에 나온 문법이에요. 본문에서 이 문법이 쓰인 문장을 찾아 밑줄 쳐 봐요!')));
+  root.append(runTest(items, {label: `Unit ${U.n} 문법`, note: `Bricks Unit ${U.n} 문법`, pass: 5, done, again: () => grammarTab(U, done),
+    intro: '6문제 중 5개 이상 한 번에 맞히면 별을 받아요.'}));
   return root;
 }
 
 /* ---------------- 🎮 Word Game ---------------- */
 function gameTab(U, done) {
   const ws = SH(U.v).slice(0, 5);
-  return G1.match(ws.map(w => [w[0], w[2]]), done, '🃏 영어 단어와 뜻 짝 맞추기!');
+  const root = h('div');
+  root.append(G1.match(ws.map(w => [w[0], w[2]]), done, '🃏 영어 단어와 뜻 짝 맞추기!'));
+  const more = (WL[U.n] || []).filter(([en]) => !U.v.some(w => w[0].toLowerCase() === en.toLowerCase()));
+  if (more.length >= 5) root.append(h('div', {style: 'margin-top:18px'}), G1.match(SH(more).slice(0, 5).map(([en, ko]) => [en, ko.split(/,|\//)[0].trim()]), () => toast('📒 단어장 단어도 척척! 👏'), '📒 보너스: 책 단어장 단어 짝 맞추기'));
+  return root;
+}
+
+
+/* ---------------- 📋 Review Test (4단원씩) · 🏁 Final Test ---------------- */
+const SYN = [['big', 'huge'], ['quickly', 'fast'], ['receive', 'get'], ['occur', 'happen'], ['begin', 'start'], ['choose', 'select'], ['finish', 'complete'], ['look for', 'search'], ['shout', 'yell'], ['smart', 'clever'], ['ancient', 'old'], ['scared', 'afraid']];
+const ANT = [['wide', 'narrow'], ['dangerous', 'safe'], ['fill', 'empty'], ['borrow', 'lend'], ['modern', 'traditional'], ['increase', 'reduce'], ['accept', 'refuse'], ['remember', 'forget'], ['visible', 'invisible'], ['common', 'rare'], ['damage', 'repair'], ['arrive', 'leave']];
+const pair = p => `${p[0]} : ${p[1]}`;
+function relItem() {
+  const syn = Math.random() < .5; const same = SH(syn ? SYN : ANT); const odd = P(syn ? ANT : SYN);
+  const opts = SH([...same.slice(1, 4), odd].map(pair));
+  return {type: 'mc', q: `다음 &lt;보기&gt;와 관계가 <b>다른</b> 것은?<br><span class="br-sent">&lt;보기&gt; ${pair(same[0])}</span> <span class="small">(${syn ? '비슷한 말' : '반대말'})</span>`, opts, ans: opts.indexOf(pair(odd)), sol: `${pair(odd)} 는 ${syn ? '반대말' : '비슷한 말'}이에요.`};
+}
+function wlItem(us) {
+  const all = us.flatMap(U => (WL[U.n] || []).filter(([en]) => !U.v.some(w => w[0].toLowerCase() === en.toLowerCase()))); const sh = SH(all); const w = sh[0];
+  const opts = SH(sh.slice(0, 4)); return {type: 'mc', q: `<b class="br-big">${w[0]}</b> 의 뜻은? <span class="small">(📒 책 단어장)</span>`, opts: opts.map(x => x[1]), ans: opts.indexOf(w), sol: `${w[0]} = ${w[1]}`};
+}
+function buildTest(us, n) {
+  const items = []; const V = us.flatMap(U => U.v.map(w => [w, U])); const C = SH(V.filter(([w]) => cloze(w)));
+  const lab = U => `Unit ${U.n}`;
+  // 단어 상자에서 골라 쓰기
+  const bank = C.slice(0, n.bank); const bw = bank.map(([w]) => w[0]);
+  bank.forEach(([w, U]) => items.push({type: 'mc', q: `<span class="small">[단어 상자: ${SH(bw).join(' · ')}]</span><br>빈칸에 알맞은 단어는? <span class="small">(${lab(U)}, 모양이 바뀔 수 있어요)</span><br><span class="br-sent">${cloze(w).text}</span>`, opts: bw, ans: bw.indexOf(w[0]), sol: w[3]}));
+  // 알맞은 단어 고르기
+  C.slice(n.bank, n.bank + n.choose).forEach(([w, U]) => { const o = SH([w, ...SH(V.map(x => x[0]).filter(x => x !== w)).slice(0, 3)]); items.push({type: 'mc', q: `빈칸에 가장 알맞은 것은? <span class="small">(${lab(U)})</span><br><span class="br-sent">${cloze(w).text}</span>`, opts: o.map(x => x[0]), ans: o.indexOf(w), sol: w[3]}); });
+  for (let i = 0; i < n.wl; i++) items.push(wlItem(us));
+  for (let i = 0; i < n.rel; i++) items.push(relItem());
+  SH(us).slice(0, n.gr).forEach(U => items.push(grItem(U.n - 1, `${lab(U)} 문법`)));
+  SH(V.filter(([w]) => w[3].split(' ').length <= 10)).slice(0, n.order).forEach(([w]) => items.push({type: 'order', q: `단어를 바르게 배열하여 문장을 완성하시오. <span class="small">(힌트: ${w[0]} = ${w[2]})</span>`, sent: w[3]}));
+  SH(us).slice(0, n.tf).forEach(U => { const t = P(U.q.filter(q => q[0] === 'TF')); items.push({type: 'mc', q: `<span class="small">[${lab(U)} ${U.t}]</span><br>글의 내용과 일치하면 True, 아니면 False.<br><span class="br-sent">${t[1]}</span>`, opts: ['True', 'False'], ans: t[2] ? 0 : 1, sol: '생각이 안 나면 책을 다시 펴서 확인해요.'}); });
+  return items;
+}
+const REVIEWS = [1, 2, 3, 4, 5].map(r => ({r, from: r * 4 - 3, to: r * 4}));
+const rgot = k => !!S.explore['br-' + k];
+function rstar(k, label) { if (!rgot(k)) { S.explore['br-' + k] = 1; save(); toast(`🏆 ${label} 통과!`); logEvent('star', {tag: label, q: 'Bricks Reading 300'}); } }
+function reviewPage(R) {
+  const us = BR.filter(U => U.n >= R.from && U.n <= R.to); const label = `Review Test ${R.r} (Unit ${R.from}~${R.to})`;
+  app.append(h('section', {class: 'lesson-head'}, h('div', {class: 'kicker'}, '📋 Review Test'), h('h1', {}, label), h('p', {}, us.map(U => `${U.em} ${U.t}`).join(' · '))));
+  const mk = () => runTest(buildTest(us, {bank: 5, choose: 4, wl: 2, rel: 1, gr: 4, order: 2, tf: 2}), {label, note: `Bricks ${label}`, pass: 16, done: () => rstar('R' + R.r, label), again: mk,
+    intro: '책 Review Test와 같은 유형(단어 상자, 알맞은 단어, 문법, 문장 배열, 내용 확인)을 <b>새로 만든 20문제</b>로 풀어요. 16점 이상이면 🏆!'});
+  app.append(mk());
+}
+function finalPage() {
+  const label = 'Final Test (Unit 1~20)';
+  app.append(h('section', {class: 'lesson-head'}, h('div', {class: 'kicker'}, '🏁 Final Test'), h('h1', {}, label), G1.say('20단원 전체에서 골고루 나와요. 리뷰 테스트를 다 통과한 뒤에 도전해 봐요!')));
+  const mk = () => runTest(buildTest(BR, {bank: 0, choose: 6, wl: 3, rel: 3, gr: 5, order: 1, tf: 2}), {label, note: `Bricks ${label}`, pass: 16, done: () => rstar('F', label), again: mk,
+    intro: '20문제 · 16점 이상이면 🏆 Level 1 완료! 볼 때마다 문제가 바뀌어요.'});
+  app.append(mk());
 }
 
 /* ---------------- 화면 ---------------- */
@@ -227,7 +311,7 @@ function home() {
   const total = BR.reduce((s, U) => s + PARTS.filter(p => got(U, p.k)).length, 0);
   const nWrong = Object.keys(S.wrong || {}).length;
   app.append(h('section', {class: 'lesson-head'}, h('div', {class: 'kicker'}, 'English · Bricks Reading 300'), h('h1', {}, 'Level 1 · 20 Units'),
-    G1.say('단원마다 <b>Words → 책 읽기 + Reading Check → Think & Write → Word Game</b> 순서로 해요. 본문은 책으로 읽어요.'),
+    G1.say('단원마다 <b>Words → 책 읽기 + Reading Check → Grammar → Think & Write → Unit Test → Word Game</b> 순서로 해요. 본문은 책으로 읽어요.'),
     h('div', {class: 'g1-row', style: 'gap:12px;flex-wrap:wrap;margin-top:6px'}, h('span', {class: 'big-num'}, `⭐ ${total} / ${BR.length * PARTS.length}`),
       nWrong ? h('a', {class: 'g1-btn ghost', href: '#wrong', style: 'text-decoration:none'}, `🔁 다시 볼 단어 ${nWrong}개`) : '', EN.btn('Hello, Seoyun! Let’s read!', '🔊 소리 확인'))));
   const g = h('div', {class: 'g1-map'});
@@ -235,11 +319,15 @@ function home() {
     h('div', {class: 'em'}, U.em), h('div', {class: 'small'}, `Unit ${String(U.n).padStart(2, '0')}`), h('h3', {style: 'font-size:20px'}, U.t), h('div', {class: 'small'}, U.ko),
     h('div', {class: 'st', html: PARTS.map(p => `<span class="${got(U, p.k) ? 'on' : ''}">★</span>`).join('')}))));
   app.append(g);
+  const rv = h('div', {class: 'g1-map', style: 'margin-top:16px'});
+  REVIEWS.forEach(R => rv.append(h('div', {class: 'g1-mapcard br-rv', onclick: () => location.hash = 'R' + R.r}, h('div', {class: 'em'}, rgot('R' + R.r) ? '🏆' : '📋'), h('h3', {style: 'font-size:19px'}, `Review Test ${R.r}`), h('div', {class: 'small'}, `Unit ${R.from} ~ ${R.to} · 20문제`))));
+  rv.append(h('div', {class: 'g1-mapcard br-rv', onclick: () => location.hash = 'F'}, h('div', {class: 'em'}, rgot('F') ? '🏆' : '🏁'), h('h3', {style: 'font-size:19px'}, 'Final Test'), h('div', {class: 'small'}, 'Unit 1 ~ 20 · 20문제')));
+  app.append(h('h2', {class: 'jua', style: 'margin:22px 0 4px'}, '📋 4단원마다 복습 시험'), rv);
 }
 function unit(U) {
   app.append(h('section', {class: 'lesson-head'}, h('div', {class: 'kicker'}, `Unit ${String(U.n).padStart(2, '0')} ${U.em}`), h('h1', {}, U.t), h('p', {}, U.ko)));
   const tabs = h('div', {class: 'g1-tabs'}); const body = h('div');
-  const F = {words: wordsTab, check: checkTab, think: thinkTab, test: testTab, game: gameTab};
+  const F = {words: wordsTab, check: checkTab, grammar: grammarTab, think: thinkTab, test: testTab, game: gameTab};
   const mark = () => [...tabs.children].forEach((t, i) => t.classList.toggle('done', got(U, PARTS[i].k)));
   function show(i) {
     EN.stop(); [...tabs.children].forEach((t, j) => t.classList.toggle('on', i === j)); body.innerHTML = '';
@@ -263,9 +351,11 @@ function wrongPage() {
 }
 function route() {
   const r = (location.hash || '#home').slice(1); app.innerHTML = ''; EN.stop();
-  document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('on', a.dataset.r === r || (r.startsWith('U') && a.dataset.r === 'home')));
+  document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('on', a.dataset.r === r || (r.startsWith('U') && a.dataset.r === 'home') || (/^R\d/.test(r) && a.dataset.r === 'R1')));
   if (r.startsWith('U')) { const U = BR.find(x => 'U' + x.n === r); if (U) return unit(U); }
   if (r === 'wrong') return wrongPage();
+  if (/^R[1-5]$/.test(r)) return reviewPage(REVIEWS[+r[1] - 1]);
+  if (r === 'F') return finalPage();
   home();
 }
 window.addEventListener('hashchange', route);

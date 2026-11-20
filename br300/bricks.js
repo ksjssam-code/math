@@ -272,7 +272,8 @@ function relItem() {
 }
 function wlItem(us) {
   const all = us.flatMap(U => (WL[U.n] || []).filter(([en]) => !U.v.some(w => w[0].toLowerCase() === en.toLowerCase()))); const sh = SH(all); const w = sh[0];
-  const opts = SH(sh.slice(0, 4)); return {type: 'mc', q: `<b class="br-big">${w[0]}</b> 의 뜻은? <span class="small">(📒 책 단어장)</span>`, opts: opts.map(x => x[1]), ans: opts.indexOf(w), sol: `${w[0]} = ${w[1]}`};
+  const seen = new Set([w[1]]); const others = sh.slice(1).filter(x => !seen.has(x[1]) && seen.add(x[1])).slice(0, 3);
+  const opts = SH([w, ...others]); return {type: 'mc', q: `<b class="br-big">${w[0]}</b> 의 뜻은? <span class="small">(📒 책 단어장)</span>`, opts: opts.map(x => x[1]), ans: opts.indexOf(w), sol: `${w[0]} = ${w[1]}`};
 }
 function buildTest(us, n) {
   const items = []; const V = us.flatMap(U => U.v.map(w => [w, U])); const C = SH(V.filter(([w]) => cloze(w)));

@@ -85,7 +85,7 @@ function readCard(x, pool, next) {
     B.append(h('div', {class: 'br-q', html: '🤔 ② 이 단어의 뜻을 <b>소리 내어</b> 말해 보세요.'}), go);
   }
   function check() {
-    const others = SH(pool.filter(o => o.en !== x.en && o.ko !== x.ko)).slice(0, 3);
+    const seen = new Set([x.ko]); const others = SH(pool).filter(o => !seen.has(o.ko) && seen.add(o.ko)).slice(0, 3);
     const opts = SH([x, ...others]);
     C.append(h('div', {class: 'br-q', html: x.ex ? `✅ ③ 내가 말한 뜻이 맞는지 골라 봐요. 이 문장의 <b>${x.en}</b> 뜻은?<br><span class="br-sent" style="font-size:18px">${boldIn(x)}</span>` : `✅ ③ 내가 말한 뜻이 맞는지 골라 봐요. <b>${x.en}</b> 의 뜻은?`}));
     const list = h('div', {class: 'br-opts'});

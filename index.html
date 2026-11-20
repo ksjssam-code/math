@@ -26,7 +26,8 @@ const UNITS=[
   {id:"u4", grade:"5-1", no:4, title:"", desc:"곧 열려요", color:"var(--mint)", ready:false, kids:["서윤"]},
   {id:"g1u4", grade:"1-2", no:4, title:"덧셈과 뺄셈(2)", desc:"10을 만들어 더하고, 십몇에서 빼요. 십 배열판과 놀이로 배워요.", color:"var(--mint)", ready:true, kids:["서현"]},
   {id:"g1u6", grade:"1-2", no:6, title:"덧셈과 뺄셈(3)", desc:"수 모형으로 두 자리 수끼리 더하고 빼요.", color:"var(--grape)", ready:true, kids:["서현"]},
-  {id:"en2", grade:"English", no:0, title:"Smart Phonics 2", desc:"단모음 a·e·i·o·u (Unit 1~8)와 Sound Expansion 1~4. 듣고, 읽고, 철자를 맞춰요.", color:"var(--sky)", ready:true, kids:["서윤","서현"]},
+  {id:"en2", grade:"English", no:0, title:"Smart Phonics 2", desc:"단모음 a·e·i·o·u (Unit 1~8)와 Sound Expansion 1~4. 듣고, 읽고, 철자를 맞춰요.", color:"var(--sky)", ready:true, kids:["서현"]},
+  {id:"br300", grade:"English", no:0, title:"Bricks Reading 300 · Level 1", desc:"20개 Unit. 책으로 읽고, 여기서 단어·이해 확인·생각 쓰기·단어 놀이를 해요.", color:"#2856A8", ready:true, kids:["서윤"]},
 ];
 function starsOf(id){try{const s=JSON.parse(localStorage.getItem('math-lab-'+id+'-'+(STUDENT?STUDENT.name:''))||'{}');return Object.keys(s.explore||{}).length+Object.keys(s.concept||{}).length}catch(e){return 0}}
 function render(){

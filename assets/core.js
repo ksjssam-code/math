@@ -390,7 +390,7 @@ function localNotes(){
   // 시트에 아직 안 간 글이나 인터넷이 안 될 때를 위한 이 기기 기록
   const out=[];
   try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);
-    if(!(k.startsWith('math-lab-u')||k.startsWith('math-lab-g1u')||k.startsWith('math-lab-en'))||!k.endsWith('-'+(STUDENT?STUDENT.name:'')))continue;
+    if(!(k.startsWith('math-lab-u')||k.startsWith('math-lab-g1u')||k.startsWith('math-lab-en')||k.startsWith('math-lab-br'))||!k.endsWith('-'+(STUDENT?STUDENT.name:'')))continue;
     const st=JSON.parse(localStorage.getItem(k)||'{}');const unit=k.split('-')[2];
     Object.entries(st.notes||{}).forEach(([nk,v])=>{if(String(v).trim()&&!nk.endsWith('-pick'))out.push({time:'',name:STUDENT.name,kind:nk.startsWith('essay')?'서술형 풀이':'발견 노트',topic:`[${unit}]`,text:v,reply:''})})}}catch(e){}
   return out;

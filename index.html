@@ -26,6 +26,7 @@ const UNITS=[
   {id:"u4", grade:"5-1", no:4, title:"", desc:"곧 열려요", color:"var(--mint)", ready:false, kids:["서윤"]},
   {id:"g1u4", grade:"1-2", no:4, title:"덧셈과 뺄셈(2)", desc:"10을 만들어 더하고, 십몇에서 빼요. 십 배열판과 놀이로 배워요.", color:"var(--mint)", ready:true, kids:["서현"]},
   {id:"g1u6", grade:"1-2", no:6, title:"덧셈과 뺄셈(3)", desc:"수 모형으로 두 자리 수끼리 더하고 빼요.", color:"var(--grape)", ready:true, kids:["서현"]},
+  {id:"en2", grade:"English", no:0, title:"Smart Phonics 2", desc:"단모음 a·e·i·o·u (Unit 1~8)와 Sound Expansion 1~4. 듣고, 읽고, 철자를 맞춰요.", color:"var(--sky)", ready:true, kids:["서윤","서현"]},
 ];
 function starsOf(id){try{const s=JSON.parse(localStorage.getItem('math-lab-'+id+'-'+(STUDENT?STUDENT.name:''))||'{}');return Object.keys(s.explore||{}).length+Object.keys(s.concept||{}).length}catch(e){return 0}}
 function render(){
@@ -33,12 +34,12 @@ function render(){
   app.append(h('section',{class:'hero',style:'grid-template-columns:1fr'},h('div',{},
     h('span',{class:'pill'},STUDENT&&!isMom()?STUDENT.name+'의 수학':'우리 집 수학'),
     h('h1',{html:'외우기 전에 <em>직접 해 보고</em><br>규칙을 발견해요'}),
-    h('p',{},'단원을 골라 탐구를 시작하세요. 탐구 → 개념 → 기본 → 심화 → 서술형 순서로 나아가요.'))));
+    h('p',{},'공부할 단원을 골라 시작하세요. 직접 해 보고, 연습하고, 도전해요!'))));
   const g=h('div',{class:'grid g3'});
   UNITS.filter(U=>!STUDENT||isMom()||!U.kids||U.kids.includes(STUDENT.name)).forEach(U=>{
     const c=h('div',{class:'card step-card unit-card'+(U.ready?'':' locked'),onclick:()=>{if(U.ready)location.href=U.id+'/'}});
     c.style.setProperty('--c',U.color);
-    c.innerHTML=`<span class="no">${U.grade} · ${U.no}단원${isMom()&&U.kids?' · '+U.kids.join(','):''}</span><h3>${U.title||'준비 중'}</h3><p>${U.desc}</p>`+(U.ready?`<div class="small" style="margin-top:8px">획득한 탐구·개념 별: ${starsOf(U.id)}개</div>`:'<div class="small" style="margin-top:8px">🔒 준비 중</div>');
+    c.innerHTML=`<span class="no">${U.grade}${U.no?' · '+U.no+'단원':''}${isMom()&&U.kids?' · '+U.kids.join(','):''}</span><h3>${U.title||'준비 중'}</h3><p>${U.desc}</p>`+(U.ready?`<div class="small" style="margin-top:8px">획득한 탐구·개념 별: ${starsOf(U.id)}개</div>`:'<div class="small" style="margin-top:8px">🔒 준비 중</div>');
     g.append(c);
   });
   app.append(g);

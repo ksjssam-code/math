@@ -7,6 +7,7 @@
 - `config.js` : 엄마 설정 (구글 시트 주소, 입장 비밀번호, 아이 이름)
 - `assets/` : 모든 단원이 함께 쓰는 디자인(`style.css`)과 기능(`core.js`: 문제 채점, 학생 로그인, 시트 기록)
 - `u2/` : 5-1 2단원 약수와 배수 (서윤)
+- `en2/` : 영어 Smart Phonics 2 (Unit 1~8 + Sound Expansion 1~4), 영어 소리는 기기 TTS
 - `g1u4/`, `g1u6/` : 1-2 4단원 덧셈과 뺄셈(2), 6단원 덧셈과 뺄셈(3) (서현) — 1학년용 공통 키트 `assets/g1kit.js`, `assets/g1.css`
 - `u3/`, `u4/` … : 이후 단원을 같은 방식으로 추가
 - `apps-script/Code.gs` : 구글 시트에 붙여 넣는 기록 수집 코드

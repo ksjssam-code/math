@@ -1,0 +1,28 @@
+.en-play{border:none;background:var(--sky);color:#fff;border-radius:999px;padding:6px 14px;font-family:Jua;font-size:17px;box-shadow:0 3px 0 #2856A8}
+.en-play.big{font-size:22px;padding:10px 20px}
+.en-listen{margin:8px 0}
+.en-fam{background:#fff;border:3px solid #F1E3C4;border-radius:22px;padding:14px;margin:12px 0}
+.en-fam-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.en-rime-big{font-family:Jua;font-size:40px}
+.en-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.en-card{border:3px solid var(--line);background:#FFFDF6;border-radius:20px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.en-card:active{transform:scale(.97);background:var(--sky-soft)}
+.en-pic{font-size:54px;line-height:1.1}
+.en-word{font-family:'Gowun Dodum',sans-serif;font-size:34px;font-weight:700;letter-spacing:1px;color:var(--ink)}
+.en-rime{font-weight:700}
+.en-tip{background:var(--sun-soft);border-radius:14px;padding:10px 14px;margin-top:10px;font-size:16px}
+.en-opt{font-family:'Gowun Dodum',sans-serif;font-weight:700;font-size:30px;letter-spacing:1px}
+.en-sent{font-family:'Gowun Dodum',sans-serif;font-size:28px;font-weight:700;line-height:1.6}
+.en-story{background:#fff;border:3px solid #E8DDFE;border-radius:22px;padding:16px;margin:10px 0}
+.en-story-t{font-family:Jua;font-size:22px;color:var(--grape)}
+.en-line{display:flex;gap:10px;align-items:center;margin:10px 0;flex-wrap:wrap}
+.en-w{cursor:pointer;border-radius:8px;padding:0 2px}
+.en-w:hover,.en-w:active{background:var(--sky-soft)}
+.en-w.sight{color:#2856A8;text-decoration:underline dotted}
+.en-slots{display:flex;gap:8px;margin:14px 0}
+.en-slot{width:58px;height:66px;border-bottom:4px solid var(--ink);display:grid;place-items:center;font-family:'Gowun Dodum',sans-serif;font-weight:700;font-size:40px}
+.en-slot.full{color:var(--sky)}
+.en-tiles{display:flex;gap:8px;flex-wrap:wrap}
+.en-tile{width:58px;height:58px;border-radius:14px;border:3px solid var(--line);background:#fff;font-family:'Gowun Dodum',sans-serif;font-weight:700;font-size:32px;color:var(--ink)}
+.en-tile:disabled{opacity:.25}
+@media (max-width:520px){.en-slot{width:44px;height:54px;font-size:32px}.en-tile{width:48px;height:48px;font-size:26px}}

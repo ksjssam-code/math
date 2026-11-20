@@ -8,6 +8,8 @@ const LOG_HEAD = ['시각', '이름', '단원', '페이지', '종류', '구분',
 const SUM_HEAD = ['이름', '마지막 접속', '푼 문제(정답)', '시도(전체)', '정답률', '별', '글 쓴 수', '최근 전체 채점', '오늘 기분'];
 const WRITE_HEAD = ['시각', '이름', '종류', '주제', '아이 글', '엄마 답장', '답장 시각', 'ID'];
 const ACCESS_HEAD = ['시각', '이름', '결과', '기기'];
+const PROG = '진도';  // 아이별·단원별 진도 (다른 기기에서 이어서 하기용, 손대지 않아도 돼요)
+const PROG_HEAD = ['이름', '단원', '저장 시각', '진도 데이터'];
 const PW_HEAD = ['이름', '비밀번호', '설명'];
 const PEOPLE = [['서윤', '', '서윤이 비밀번호'], ['서현', '', '서현이 비밀번호'], ['엄마', '', '엄마 모드 비밀번호 (아이들이 모르게)']];
 const ACCESS_TYPES = ['login', 'visit'];
@@ -111,6 +113,19 @@ function action_(ss, b) {
   }
   if (!validToken_(ss, who, b.token)) return {ok: false, invalid: true, error: '다시 로그인해 주세요.'};
   if (b.action === 'check') return {ok: true};
+  if (b.action === 'pull' || b.action === 'push') {
+    if (who === '엄마') return {ok: true};
+    const sh = sheet_(ss, PROG, PROG_HEAD);
+    const unit = String(b.unit || '');
+    const keys = sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, 2).getValues().map(r => r[0] + '|' + r[1]) : [];
+    const i = keys.indexOf(who + '|' + unit);
+    if (b.action === 'pull') return {ok: true, data: i < 0 ? '' : String(sh.getRange(i + 2, 4).getValue())};
+    const data = String(b.data || '');
+    if (data.length > 45000) return {ok: false, error: '진도 데이터가 너무 커요'};
+    const row = [who, unit, new Date(), data];
+    if (i < 0) sh.appendRow(row); else sh.getRange(i + 2, 1, 1, 4).setValues([row]);
+    return {ok: true};
+  }
   if (b.action === 'list') {
     const sh = ss.getSheetByName(WRITE);
     if (!sh || sh.getLastRow() < 2) return {ok: true, rows: []};

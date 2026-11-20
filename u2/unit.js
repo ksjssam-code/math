@@ -697,7 +697,7 @@ function renderNotes(){
   Object.entries(labels).forEach(([k,lab])=>{const v=(S.notes[k]||'').trim();if(v){any=true;all.push(`[${lab}]\n${v}`);app.append(h('div',{class:'q-box'},h('b',{},lab),h('div',{style:'white-space:pre-wrap'},v)))}});
   if(!any) app.append(h('div',{class:'card'},'아직 쓴 발견이 없어요. 탐구 활동의 ✏️ 칸에 생각을 써 보세요!'));
   else{const fb=h('span',{class:'small'});app.append(h('div',{class:'row',style:'margin-top:12px'},h('button',{class:'btn',onclick:()=>{navigator.clipboard.writeText(all.join('\n\n')).then(()=>fb.textContent='복사했어요! 학습지나 패들렛에 붙여 넣으세요.').catch(()=>fb.textContent='복사가 막혀 있어요. 직접 선택해서 복사해 주세요.')}},'📋 노트 전체 복사'),fb))}
-  app.append(h('div',{class:'row',style:'margin-top:24px'},h('button',{class:'btn ghost small',onclick:(e)=>{if(e.target.dataset.c){S={explore:{},concept:{},solved:{},notes:{}};save();route()}else{e.target.dataset.c=1;e.target.textContent='정말 지울까요? 한 번 더 누르세요'}}},'기록 모두 지우기')));
+  app.append(h('div',{class:'row',style:'margin-top:24px'},h('button',{class:'btn ghost small',onclick:(e)=>{if(e.target.dataset.c){S={explore:{},concept:{},solved:{},notes:{},__reset:Date.now()};save();route()}else{e.target.dataset.c=1;e.target.textContent='정말 지울까요? 한 번 더 누르세요'}}},'기록 모두 지우기')));
 }
 
 updateWho();ensureStudent(route);flushLog();

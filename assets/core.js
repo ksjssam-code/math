@@ -27,7 +27,43 @@ let STUDENT=null;try{STUDENT=JSON.parse(localStorage.getItem(STU_KEY))}catch(e){
 const KEY='math-lab-'+(window.UNIT?UNIT.id:'x')+'-'+(STUDENT?STUDENT.name:'');
 let S={explore:{},concept:{},solved:{},notes:{}};
 try{const raw=localStorage.getItem(KEY); if(raw) S=Object.assign(S,JSON.parse(raw));}catch(e){}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function save(){S.__t=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}schedulePush()}
+
+/* ---------- 진도 동기화: 다른 기기에서도 이어서 하기 (구글 시트 '진도' 탭) ---------- */
+const SYNC_ON=()=>window.UNIT&&UNIT.id!=='portal'&&STUDENT&&!STUDENT.mom&&MATHLAB_CONFIG.sheetUrl&&readKey(STUDENT.name);
+let pushTimer=null,lastPushed='';
+function pushNow(keep){
+  if(!SYNC_ON())return;const data=JSON.stringify(S);if(data===lastPushed)return;lastPushed=data;
+  const body=JSON.stringify({action:'push',who:STUDENT.name,token:readKey(STUDENT.name),unit:UNIT.id,data});
+  try{fetch(MATHLAB_CONFIG.sheetUrl,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body,keepalive:!!keep&&body.length<60000}).catch(()=>{lastPushed=''})}catch(e){lastPushed=''}
+}
+function schedulePush(){if(!SYNC_ON())return;clearTimeout(pushTimer);pushTimer=setTimeout(()=>pushNow(),4000)}
+window.addEventListener('pagehide',()=>{clearTimeout(pushTimer);pushNow(true)});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){clearTimeout(pushTimer);pushNow(true)}});
+function mergeState(a,b,bNewer){ // a=내 기기, b=서버
+  if(a&&b&&typeof a==='object'&&typeof b==='object'&&!Array.isArray(a)&&!Array.isArray(b)){
+    const o={};new Set([...Object.keys(a),...Object.keys(b)]).forEach(k=>{
+      if(!(k in a))o[k]=b[k];else if(!(k in b))o[k]=a[k];else o[k]=mergeState(a[k],b[k],bNewer)});return o}
+  if(a===undefined||a===null||a===0||a===''||a===false)return b===undefined?a:b;   // 별·푼 문제는 한쪽이라도 했으면 유지
+  if(b===undefined||b===null||b===0||b===''||b===false)return a;
+  return bNewer?b:a;
+}
+function pullProgress(){
+  if(!SYNC_ON())return;
+  api('pull',{who:STUDENT.name,token:readKey(STUDENT.name),unit:UNIT.id}).then(j=>{
+    if(!j||!j.ok){return}
+    if(!j.data){pushNow();return}
+    let srv;try{srv=JSON.parse(j.data)}catch(e){return}
+    if(S.__reset&&(srv.__t||0)<S.__reset){pushNow();return}
+    const before=JSON.stringify(S);
+    const m=mergeState(S,srv,(srv.__t||0)>(S.__t||0));m.__t=Math.max(S.__t||0,srv.__t||0);
+    S=Object.assign(S,m);
+    if(JSON.stringify(S)!==before){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+      try{window.dispatchEvent(new HashChangeEvent('hashchange'))}catch(e){}
+      toast('☁️ 다른 기기에서 한 공부를 불러왔어요')}
+    if(JSON.stringify(S)!==j.data)pushNow();else lastPushed=j.data;
+  }).catch(()=>{});
+}
 function toast(msg){let t=document.getElementById('toast');if(!t){t=document.createElement('div');t.id='toast';t.className='toast';document.body.append(t)}t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),1800)}
 function markSolved(id){if(!S.solved[id]){S.solved[id]=1;save()}}
 
@@ -118,7 +154,7 @@ function todayStr(){const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+
 function afterLogin(cb){
   cb&&cb();addLetterButton();
   if(isMom()){if(!document.getElementById('mom-bar'))document.body.prepend(h('div',{id:'mom-bar',class:'mom-bar'},'👩 엄마 모드 · 아이 화면과 똑같이 보이고, 기록은 남지 않아요 · ',h('button',{onclick:openMomInbox},'📬 아이들 글 보기')));return}
-  checkReplies();
+  checkReplies();pullProgress();
   try{if(!sessionStorage.getItem('math-lab-visit-'+STUDENT.name)){sessionStorage.setItem('math-lab-visit-'+STUDENT.name,'1');logEvent('visit',{answer:deviceStr()})}}catch(e){}
   const k='math-lab-mood-'+(STUDENT&&STUDENT.name);let last='';try{last=localStorage.getItem(k)}catch(e){}
   if(last===todayStr())return;

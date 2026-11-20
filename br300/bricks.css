@@ -11,3 +11,13 @@
 .br-opt{font-family:'Gowun Dodum',sans-serif;font-weight:700;font-size:22px}
 .br-sent{font-family:'Gowun Dodum',sans-serif;font-weight:700;font-size:21px;line-height:1.6}
 .br-book{display:flex;gap:14px;align-items:center;background:var(--mint-soft);border-radius:18px;padding:14px 18px;margin:6px 0 12px}
+.br-tq{font-size:18px;line-height:1.6;margin:6px 0 10px}
+.br-opts{display:flex;flex-direction:column;gap:8px}
+.br-optbtn{text-align:left;border:2px solid var(--line);background:#fff;border-radius:14px;padding:10px 14px;font-size:17px;color:var(--ink);line-height:1.5}
+.br-optbtn.ok{border-color:var(--mint);background:var(--mint-soft)}
+.br-optbtn.no{border-color:var(--bad);background:var(--bad-soft)}
+.br-line{min-height:52px;border-bottom:3px solid var(--ink);display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 0;margin:6px 0}
+.br-pool{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.br-tile{border:2px solid var(--line);background:#fff;border-radius:12px;padding:6px 12px;font-family:'Gowun Dodum',sans-serif;font-weight:700;font-size:19px;color:var(--ink)}
+.br-tile.on{background:var(--sky-soft);border-color:var(--sky)}
+.br-tile:disabled{opacity:.25}

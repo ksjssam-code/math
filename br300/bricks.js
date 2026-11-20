@@ -7,7 +7,7 @@ const SH = G1.shuffle, P = G1.pick;
 const key = (U, k) => `br-${U.n}-${k}`;
 const got = (U, k) => !!S.explore[key(U, k)];
 const PARTS = [
-  {k: 'words', n: '🔤 Words', d: '단어 익히기 → 단어 퀴즈'},
+  {k: 'words', n: '🔤 Words', d: '단어 익히기 → 읽기·뜻 말하기 → 단어 퀴즈'},
   {k: 'check', n: '📚 Reading Check', d: '책을 읽고 이해 확인'},
   {k: 'grammar', n: '🧩 Grammar', d: '이 단원의 문법 익히기 (6문제)'},
   {k: 'think', n: '✍️ Think & Write', d: '내 생각 쓰기 (엄마에게 전달돼요)'},
@@ -50,7 +50,8 @@ function wordsTab(U, done) {
     more.forEach(([en, ko]) => mg.append(h('div', {class: 'br-minicard'}, h('b', {}, en), h('span', {}, ko), EN.btn(en, '🔊'))));
     box.append(mg); root.append(box);
   }
-  const quizArea = h('div');
+  const quizArea = h('div'); const readArea = h('div');
+  root.append(h('div', {style: 'text-align:center;margin:16px 0 0'}, h('button', {class: 'g1-btn mint', onclick: (e) => { e.target.remove(); readArea.append(readSession(SH(U.v.map(w => ({en: w[0], pos: w[1], ko: w[2], ex: w[3], u: U.n, w}))), {label: `Unit ${U.n} 읽기·뜻`, pool: wordPool(20)})); readArea.scrollIntoView({behavior: 'smooth'}); }}, '🗣️ 먼저 읽기·뜻 말하기 연습 (8단어)')), readArea);
   root.append(h('div', {style: 'text-align:center;margin:16px 0'}, h('button', {class: 'g1-btn', onclick: (e) => { e.target.remove(); quizArea.append(wordQuiz(U, done)); quizArea.scrollIntoView({behavior: 'smooth'}); }}, '📝 단어 퀴즈 시작 (10문제)')), quizArea);
   return root;
 }
@@ -314,6 +315,8 @@ function home() {
     G1.say('단원마다 <b>Words → 책 읽기 + Reading Check → Grammar → Think & Write → Unit Test → Word Game</b> 순서로 해요. 본문은 책으로 읽어요.'),
     h('div', {class: 'g1-row', style: 'gap:12px;flex-wrap:wrap;margin-top:6px'}, h('span', {class: 'big-num'}, `⭐ ${total} / ${BR.length * PARTS.length}`),
       nWrong ? h('a', {class: 'g1-btn ghost', href: '#wrong', style: 'text-decoration:none'}, `🔁 다시 볼 단어 ${nWrong}개`) : '', EN.btn('Hello, Seoyun! Let’s read!', '🔊 소리 확인'))));
+  const td = todaySet(); const tn = td.due.length + td.fresh.length;
+  app.append(h('a', {class: 'br-daily', href: '#daily'}, h('div', {class: 'em'}, S.dDone === dayNo() ? '✅' : '📅'), h('div', {}, h('b', {}, '오늘의 단어'), h('div', {class: 'small'}, S.dDone === dayNo() ? '오늘 완료! 더 해도 좋아요' : `소리 내어 읽고 뜻 말하기 · 오늘 ${tn}단어 (복습 ${td.due.length})`)), h('span', {class: 'g1-btn'}, '시작 →')));
   const g = h('div', {class: 'g1-map'});
   BR.forEach(U => g.append(h('div', {class: 'g1-mapcard', onclick: () => location.hash = 'U' + U.n},
     h('div', {class: 'em'}, U.em), h('div', {class: 'small'}, `Unit ${String(U.n).padStart(2, '0')}`), h('h3', {style: 'font-size:20px'}, U.t), h('div', {class: 'small'}, U.ko),
@@ -356,6 +359,7 @@ function route() {
   if (r === 'wrong') return wrongPage();
   if (/^R[1-5]$/.test(r)) return reviewPage(REVIEWS[+r[1] - 1]);
   if (r === 'F') return finalPage();
+  if (r === 'daily') return dailyPage();
   home();
 }
 window.addEventListener('hashchange', route);

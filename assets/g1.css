@@ -113,3 +113,7 @@ body.g1{font-size:19px}
 .g1-ordercard{border:3px solid var(--line);background:#fff;border-radius:16px;padding:10px 14px;font-family:Jua;font-size:19px;color:var(--ink);text-align:left}
 .g1-ordercard.used{opacity:.35}
 .g1-orderlist div{background:var(--mint-soft);border-radius:12px;padding:8px 12px;margin:6px 0;font-family:Jua;font-size:19px}
+
+/* 읽어 주기 끔 */
+.g1-novoice .g1-spk,.g1-novoice .g1-voice{display:none!important}
+.g1-novoice .g1-say-t{padding-top:0}

@@ -7,7 +7,10 @@
 const G1 = {};
 
 /* ---------- 소리 ---------- */
-G1.voiceOn = (() => { try { return localStorage.getItem('g1-voice') !== 'off'; } catch (e) { return true; } })();
+/* config.js 의 readAloud: false 이면 읽어 주기를 끄고 🔊 버튼도 숨겨요 (읽기 연습용) */
+G1.allowVoice = (window.MATHLAB_CONFIG || {}).readAloud !== false;
+G1.voiceOn = G1.allowVoice && (() => { try { return localStorage.getItem('g1-voice') !== 'off'; } catch (e) { return true; } })();
+if (!G1.allowVoice) document.documentElement.classList.add('g1-novoice');
 G1.speak = (text) => {
   if (!G1.voiceOn || !text) return;
   try {

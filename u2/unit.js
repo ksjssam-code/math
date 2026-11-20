@@ -48,15 +48,19 @@ function route(){
   const r=(location.hash||'#home').slice(1);
   document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.r===r||(r.startsWith('lesson')&&a.dataset.r==='home')));
   app.innerHTML='';window.scrollTo(0,0);
-  if(r.startsWith('lesson-')){const k=r.slice(7);const L=LESSONS.find(x=>x.key===k);if(L) return renderLesson(L)}
-  if(r==='challenge') return renderChallenge();
-  if(r==='top-level') return renderTop();
-  if(r==='essay') return renderEssay();
+  if(r.startsWith('lesson-')){const [k,t]=r.slice(7).split('/');const L=LESSONS.find(x=>x.key===k);if(L) return renderLesson(L,t===undefined?null:+t)}
+  if(r==='challenge'){remember(r,'심화 유형 8가지');return renderChallenge()}
+  if(r==='top-level'){remember(r,'최상위 도전');return renderTop()}
+  if(r==='essay'){remember(r,'서술형 쓰기');return renderEssay()}
   if(r==='notes') return renderNotes();
   renderHome();
 }
 window.addEventListener('hashchange',route);
 
+/* 어디까지 했는지 기억해서 '이어서 하기' */
+function remember(r,label){S.last={r,label};save()}
+function nextLesson(){return LESSONS.find(L=>M.sum(starsFor(L.key))<3)}
+function firstTodo(L){const st=starsFor(L.key);const i=st.findIndex(x=>!x);return i<0?0:i}
 function starsFor(k){
   const e=S.explore[k]?1:0, c=S.concept[k]?1:0, b=solvedCount(k+'-')>=5?1:0;
   if(k==='project') return [S.explore.project?1:0, S.concept.project?1:0, S.solved['project-own']?1:0];
@@ -73,7 +77,11 @@ function renderHome(){
       h('h1',{html:'직접 <em>나누고, 곱하고, 뛰어 보며</em><br>약수와 배수를 발견해요'}),
       STUDENT?h('div',{class:'small'},`🙂 ${studentLabel()}의 탐구실`):'',
       h('p',{},'개념을 먼저 외우지 않아요. 꽃병에 꽃을 나누고, 개구리를 뛰게 하고, 타일을 깔아 보면서 규칙을 스스로 찾아요. 찾은 규칙으로 기본 문제부터 최상위 문제까지 해결해요.'),
-      h('div',{class:'row'},h('a',{class:'btn coral',href:'#lesson-divisor',style:'text-decoration:none'},'1단계부터 탐구 시작'),h('a',{class:'btn ghost',href:'#challenge',style:'text-decoration:none'},'심화 유형 바로가기'))
+      h('div',{class:'row'},
+        S.last?h('a',{class:'btn coral',href:'#'+S.last.r,style:'text-decoration:none'},'▶ 이어서 하기: '+S.last.label):h('a',{class:'btn coral',href:'#lesson-divisor',style:'text-decoration:none'},'1단계부터 탐구 시작'),
+        (()=>{const N=nextLesson();return N&&(S.last?!S.last.r.startsWith('lesson-'+N.key):N!==LESSONS[0])?h('a',{class:'btn',href:'#lesson-'+N.key,style:'text-decoration:none'},`👉 다음 차례: ${N.no}단계 ${N.title}`):''})(),
+        h('a',{class:'btn ghost',href:'#challenge',style:'text-decoration:none'},'심화 유형 바로가기')),
+      h('div',{class:'small',style:'margin-top:6px'},'아래 탐구 지도에서 하고 싶은 단계와 활동을 골라서 해도 돼요.')
     ),
     h('div',{class:'card'},
       h('div',{class:'jua',style:'font-size:18px'},'나의 탐구 여정'),
@@ -82,12 +90,19 @@ function renderHome(){
       h('div',{class:'small',style:'margin-top:8px'},`심화·최상위 해결: ${solvedCount('ch-')+solvedCount('top-')}문제 · 서술형: ${solvedCount('essay-')}문제`)
     )
   ));
-  app.append(h('div',{class:'section-title'},h('h2',{},'탐구 지도'),h('span',{},'차례대로 하면 좋아요')));
+  app.append(h('div',{class:'section-title'},h('h2',{},'탐구 지도'),h('span',{},'하고 싶은 단계를 눌러요')));
   const g=h('div',{class:'grid g3'});
+  const NX=nextLesson();
   LESSONS.forEach(L=>{
     const c=h('div',{class:'card step-card',onclick:()=>location.hash='lesson-'+L.key});
     c.style.setProperty('--c',L.color);
-    c.innerHTML=`<span class="no">${L.no}단계</span><h3>${L.title}</h3><p>${L.sub}</p><div class="small" style="margin-top:4px">${L.page}</div><div class="stars">${starHTML(starsFor(L.key))}</div>`;
+    const st=starsFor(L.key),all=M.sum(st)===st.length;
+    const badge=all?'<span class="lbadge done">✅ 완료</span>':(L===NX?'<span class="lbadge next">👉 다음 차례</span>':(M.sum(st)?'<span class="lbadge">하는 중</span>':''));
+    const names=L.key==='project'?['탐구','정리','내 문제']:['탐구','개념','기본','오개념'];
+    c.innerHTML=`<span class="no">${L.no}단계</span>${badge}<h3>${L.title}</h3><p>${L.sub}</p><div class="small" style="margin-top:4px">${L.page}</div><div class="stars">${starHTML(st)}</div>`;
+    const jump=h('div',{class:'ljump'});
+    names.forEach((n,i)=>jump.append(h('button',{class:'ljump-b'+(st[i]?' ok':''),onclick:e=>{e.stopPropagation();location.hash='lesson-'+L.key+'/'+i}},(st[i]?'✓ ':'')+n)));
+    c.append(jump);
     g.append(c);
   });
   app.append(g);
@@ -101,7 +116,7 @@ function renderHome(){
 }
 
 /* ---------------- LESSON ---------------- */
-function renderLesson(L){
+function renderLesson(L,startTab){
   const head=h('section',{class:'lesson-head',style:`--c:${L.color}`},
     h('div',{class:'kicker'},`${L.no}단계 · ${L.page}`),h('h1',{},L.title),h('p',{},L.sub));
   app.append(head);
@@ -110,6 +125,8 @@ function renderLesson(L){
   const tabs=h('div',{class:'tabs'});const body=h('div');
   let cur=0;
   function show(i){cur=i;[...tabs.children].forEach((t,j)=>t.classList.toggle('on',j===i));body.innerHTML='';
+    S.tab=S.tab||{};S.tab[L.key]=i;remember('lesson-'+L.key+'/'+i,`${L.no}단계 ${L.title} · ${tabNames[i]}`);
+    try{history.replaceState(null,'','#lesson-'+L.key+'/'+i)}catch(e){}
     const fns=isProj?[exploreProject,conceptProject,ownProject]:[EXPLORE[L.key],()=>renderConcept(L),()=>renderBasics(L),()=>renderMiscon(L)];
     body.append(fns[i](L,()=>{refreshTabs()}));
     body.append(h('div',{class:'row',style:'margin-top:20px;justify-content:space-between'},
@@ -118,9 +135,11 @@ function renderLesson(L){
   }
   function refreshTabs(){const st=starsFor(L.key);[...tabs.children].forEach((t,j)=>t.classList.toggle('done',!!st[j]))}
   tabNames.forEach((n,i)=>tabs.append(h('button',{class:'tab',onclick:()=>show(i)},h('span',{class:'n'},String(i+1)),n)));
-  app.append(tabs,body);refreshTabs();show(0);
+  app.append(tabs,body);refreshTabs();
+  const def=startTab!=null&&startTab<tabNames.length?startTab:(S.tab&&S.tab[L.key]!=null?S.tab[L.key]:firstTodo(L));
+  show(Math.min(def,tabNames.length-1));
 }
-function nextLessonBtn(L){const i=LESSONS.indexOf(L);if(i<LESSONS.length-1){const N=LESSONS[i+1];return h('a',{class:'btn coral',href:'#lesson-'+N.key,style:'text-decoration:none'},`${N.no}단계 ${N.title} →`)}return h('a',{class:'btn coral',href:'#challenge',style:'text-decoration:none'},'심화 유형 도전 →')}
+function nextLessonBtn(L){const i=LESSONS.indexOf(L);if(i<LESSONS.length-1){const N=LESSONS[i+1];return h('a',{class:'btn coral',href:'#lesson-'+N.key+'/0',style:'text-decoration:none'},`${N.no}단계 ${N.title} →`)}return h('a',{class:'btn coral',href:'#challenge',style:'text-decoration:none'},'심화 유형 도전 →')}
 
 function noteBox(key,prompt){
   const ta=h('textarea',{class:'note',placeholder:'내 말로 써 보세요…'});ta.value=S.notes[key]||'';

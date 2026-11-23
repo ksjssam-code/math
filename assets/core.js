@@ -62,7 +62,7 @@ function pullProgress(){
     S=Object.assign(S,m);
     if(JSON.stringify(S)!==before){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
       try{window.dispatchEvent(new HashChangeEvent('hashchange'))}catch(e){}
-      toast('☁️ 다른 기기에서 한 공부를 불러왔어요')}
+      }
     if(JSON.stringify(S)!==j.data)pushNow();else lastPushed=j.data;
   }).catch(()=>{});
 }

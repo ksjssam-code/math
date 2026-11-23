@@ -496,8 +496,8 @@ function gradeAllBar(getCards,label){
     const cards=getCards();let n=0;cards.forEach(c=>{if(c.grade&&c.grade())n++});
     out.className='fb show '+(n===cards.length?'good':'info');
     const first=cards.filter(c=>c.firstTry).length,retry=cards.filter(c=>c.classList.contains('retry')).length;
-    out.innerHTML=`<b class="jua" style="font-size:20px">${n} / ${cards.length}</b> 인정 (한 번에 ${first}개)`+(retry?` · 다시 풀 문제 ${retry}개`:'')+'<br>'+(n===cards.length?'모두 맞혔어요! 🎉':'틀린 문제는 한 번 더 기회가 있어요. 두 번 틀리면 엄마에게 물어보고, 비슷한 새 문제로 다시 도전해요.');
-    logEvent('score',{tag:'전체 채점',q:label,ok:n===cards.length?'O':'X',answer:`${n}/${cards.length} (한 번에 ${first}, 다시 풀 문제 ${retry})`});
+    out.innerHTML=`<b class="jua" style="font-size:20px">${n} / ${cards.length}</b> 맞았어요 (한 번에 ${first}개)`+(retry?` · 아직 도전 중 ${retry}개`:'')+'<br>'+(n===cards.length?'모두 맞혔어요! 🎉':'틀린 문제는 힌트를 보고 맞힐 때까지 다시 도전해요. 막히면 📮 엄마에게 물어봐요.');
+    logEvent('score',{tag:'전체 채점',q:label,ok:n===cards.length?'O':'X',answer:`${n}/${cards.length} (한 번에 ${first}, 도전 중 ${retry})`});
   }},'📝 이 페이지 전체 채점');
   return h('div',{class:'card',style:'margin-top:8px'},h('div',{class:'row'},btn,h('span',{class:'small'},'다 풀었으면 한꺼번에 채점해 보세요. (문제마다 채점해도 돼요)')),out);
 }

@@ -274,10 +274,9 @@ function renderProblem(p, num, opts={}){
   const fb=h('div',{class:'fb'});
   const hint=h('div',{class:'hintbox'});
   const sol=h('div',{class:'solbox',html:'<b class="jua">풀이</b><br>'+(p.sol||'')});
-  /* 정직한 채점: 두 번 안에 맞혀야 인정. 풀이는 엄마 모드에서만 보이고,
-     아이는 두 번 틀리면 힌트를 다시 보거나 엄마에게 물어봐요(비슷한 새 문제 / 내일 다시). */
+  /* 채점: 기회는 무제한. 풀이는 엄마 모드에서만 보이고(베껴 쓰기 방지),
+     두 번 틀리면 '엄마에게 물어보기', 세 번 틀리면 '비슷한 새 문제'도 나와요. 시도 횟수는 시트에 남아요. */
   let tries=0,hintIdx=0,saw=false,wrongs=0;
-  const MAXTRY=2;
   const ansText=()=>getters.map(g=>g.el.tagName==='INPUT'||g.el.tagName==='SELECT'?g.el.value:[...g.el.querySelectorAll('.sel')].map(b=>b.textContent).join('/')).join(' | ');
   const MOM=isMom();
   const regenRow=()=>{if(opts.regen&&!card.querySelector('.regen'))card.append(h('div',{class:'row regen',style:'margin-top:8px'},h('button',{class:'btn small',type:'button',onclick:()=>{const p2=opts.regen();const c2=renderProblem(p2,num,opts);card.replaceWith(c2);c2.scrollIntoView({behavior:'smooth',block:'center'})}},'🔁 비슷한 새 문제로 다시 도전')))};
@@ -305,16 +304,15 @@ function renderProblem(p, num, opts={}){
     tries++;
     getters.forEach((g,i)=>{if(g.el.tagName==='INPUT'||g.el.tagName==='SELECT'){g.el.classList.toggle('right',res[i]);g.el.classList.toggle('wrong',!res[i])}});
     const ok=res.every(Boolean);
-    const credit=ok&&!saw&&wrongs<MAXTRY;
+    const credit=ok;void saw;
     fb.className='fb show '+(credit?'good':ok?'info':'bad');
-    if(credit){fb.innerHTML=(tries===1?'한 번에 정답! 🎯 ':'두 번째에 정답! 👏 ')+(p.praise||'어떻게 풀었는지 설명해 보세요.');card.classList.add('solved');card.firstTry=tries===1;markSolved(p.id);if(opts.onSolve)opts.onSolve();}
-    else if(ok){fb.innerHTML='맞았어요! 하지만 두 번 틀린 뒤라 점수에는 안 들어가요. '+(opts.regen?'비슷한 새 문제로 다시 도전!':'내일 다시 도전!');card.classList.add('retry');regenRow();}
+    if(credit){card.classList.remove('retry');fb.innerHTML=(tries===1?'한 번에 정답! 🎯 ':tries===2?'두 번째에 정답! 👏 ':`${tries}번 만에 해냈어요! 포기하지 않았네요 💪 `)+(p.praise||'어떻게 풀었는지 설명해 보세요.');card.classList.add('solved');card.firstTry=tries===1;markSolved(p.id);if(opts.onSolve)opts.onSolve();}
     else{wrongs++;
-      if(wrongs<MAXTRY)fb.innerHTML='다시 생각해 볼까요? 한 번 더 기회가 있어요. 힌트를 눌러 보세요. 💡';
-      else{fb.innerHTML='두 번 다 틀렸어요. 힌트를 다시 읽고 혼자 더 풀어 보거나, 엄마에게 물어봐요. 이 문제는 '+(opts.regen?'<b>비슷한 새 문제</b>를 맞히면 인정돼요.':'<b>내일 다시</b> 맞히면 인정돼요.');card.classList.add('retry');if(!MOM)askBtn.classList.remove('hide');regenRow();}}
-    if(!opts.silent) logEvent('attempt',{tag:p.tag||'',q:stripHtml(p.q),ok:credit?'O':(ok?'O(인정X)':'X'),tries,answer:ansText()});
+      if(wrongs===1)fb.innerHTML='다시 생각해 볼까요? 힌트를 눌러 보세요. 💡';
+      else{fb.innerHTML=`아직이에요 (${wrongs}번째). 힌트를 다시 읽고 계속 도전해도 되고, 막히면 엄마에게 물어봐요.`;card.classList.add('retry');if(!MOM)askBtn.classList.remove('hide');if(wrongs>=3)regenRow();}}
+    if(!opts.silent) logEvent('attempt',{tag:p.tag||'',q:stripHtml(p.q),ok:ok?'O':'X',tries,answer:ansText()});
   }},'채점');
-  card.grade=()=>{if(card.classList.contains('solved'))return true;if(!card.classList.contains('retry'))checkBtn.click();return card.classList.contains('solved')};
+  card.grade=()=>{if(card.classList.contains('solved'))return true;checkBtn.click();return card.classList.contains('solved')};
   card.append(h('div',{class:'acts'},checkBtn,hintBtn,askBtn,solBtn),fb,askBox,hint,sol);
   return card;
 }

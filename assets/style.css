@@ -180,3 +180,5 @@ table.t th{background:#F7F1E6;font-weight:400;font-family:Jua}
 .ljump{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .ljump-b{font:inherit;font-size:13px;padding:4px 10px;border-radius:99px;border:1.5px solid #DDE3EE;background:#fff;cursor:pointer}
 .ljump-b.ok{background:#E3F8EE;border-color:#A8E2C4;color:#1E7A4E}
+
+.prob.retry{border-color:#FFC98A}

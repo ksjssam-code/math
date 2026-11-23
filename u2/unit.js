@@ -483,7 +483,7 @@ function renderBasics(L,cb){
   const info=h('div',{class:'small'});
   function gen(){list.innerHTML='';const gens=G[L.key];
     const order=M.shuffle(gens).concat(M.shuffle(gens)).slice(0,5);
-    order.forEach((g,i)=>list.append(renderProblem(g(),i+1,{color:L.color,onSolve:()=>{upd();cb()}})));upd()}
+    order.forEach((g,i)=>list.append(renderProblem(g(),i+1,{color:L.color,regen:g,onSolve:()=>{upd();cb()}})));upd()}
   function upd(){const n=solvedCount(L.key+'-');info.innerHTML=`지금까지 이 단계에서 맞힌 문제: <b>${n}</b>개 ${n>=5?'· 기본 별 ★ 획득!':'(5개 맞히면 별 ★)'}`}
   root.append(h('div',{class:'row',style:'justify-content:space-between;margin-bottom:12px'},info,h('button',{class:'btn ghost small',onclick:gen},'🔄 새 문제 5개')));
   root.append(list);gen();
@@ -495,8 +495,9 @@ function gradeAllBar(getCards,label){
   const btn=h('button',{class:'btn coral',onclick:()=>{
     const cards=getCards();let n=0;cards.forEach(c=>{if(c.grade&&c.grade())n++});
     out.className='fb show '+(n===cards.length?'good':'info');
-    out.innerHTML=`<b class="jua" style="font-size:20px">${n} / ${cards.length}</b> 맞았어요. `+(n===cards.length?'모두 맞혔어요! 🎉':'틀린 문제는 힌트를 보고 다시 도전해 보세요. 문제마다 있는 채점 버튼으로 하나씩 다시 확인할 수 있어요.');
-    logEvent('score',{tag:'전체 채점',q:label,ok:n===cards.length?'O':'X',answer:`${n}/${cards.length}`});
+    const first=cards.filter(c=>c.firstTry).length,retry=cards.filter(c=>c.classList.contains('retry')).length;
+    out.innerHTML=`<b class="jua" style="font-size:20px">${n} / ${cards.length}</b> 인정 (한 번에 ${first}개)`+(retry?` · 다시 풀 문제 ${retry}개`:'')+'<br>'+(n===cards.length?'모두 맞혔어요! 🎉':'틀린 문제는 한 번 더 기회가 있어요. 두 번 틀리면 풀이를 보고, 비슷한 새 문제로 다시 도전해요.');
+    logEvent('score',{tag:'전체 채점',q:label,ok:n===cards.length?'O':'X',answer:`${n}/${cards.length} (한 번에 ${first}, 다시 풀 문제 ${retry})`});
   }},'📝 이 페이지 전체 채점');
   return h('div',{class:'card',style:'margin-top:8px'},h('div',{class:'row'},btn,h('span',{class:'small'},'다 풀었으면 한꺼번에 채점해 보세요. (문제마다 채점해도 돼요)')),out);
 }
@@ -615,7 +616,7 @@ function renderChallenge(){
     // 유사 문제
     const sim=h('div',{style:'margin-top:16px'});detail.append(sim);
     function genSim(){sim.innerHTML='';sim.append(h('div',{class:'row',style:'justify-content:space-between;margin-bottom:10px'},h('h3',{style:'margin:0'},'유사 문제'),h('button',{class:'btn ghost small',onclick:genSim},'🔄 다른 숫자로')));
-      [T.gen(),T.gen2()].forEach((p,i)=>{p.id=uid(`ch-${T.no}`);sim.append(renderProblem(p,`${T.no}-${i+1}`,{color:'var(--grape)'}))})}
+      [[T.gen,T.gen()],[T.gen2,T.gen2()]].forEach(([gf,p],i)=>{p.id=uid(`ch-${T.no}`);sim.append(renderProblem(p,`${T.no}-${i+1}`,{color:'var(--grape)',regen:()=>{const q=gf();q.id=uid(`ch-${T.no}`);return q}}))})}
     genSim();
   }
   showType(TYPES[0]);

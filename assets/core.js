@@ -39,7 +39,9 @@ function pushNow(keep){
 }
 function schedulePush(){if(!SYNC_ON())return;clearTimeout(pushTimer);pushTimer=setTimeout(()=>pushNow(),4000)}
 window.addEventListener('pagehide',()=>{clearTimeout(pushTimer);pushNow(true)});
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){clearTimeout(pushTimer);pushNow(true)}});
+let lastPull=0;
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){clearTimeout(pushTimer);pushNow(true)}else if(Date.now()-lastPull>15000)pullProgress()});
+window.addEventListener('focus',()=>{if(Date.now()-lastPull>15000)pullProgress()});
 function mergeState(a,b,bNewer){ // a=내 기기, b=서버
   if(a&&b&&typeof a==='object'&&typeof b==='object'&&!Array.isArray(a)&&!Array.isArray(b)){
     const o={};new Set([...Object.keys(a),...Object.keys(b)]).forEach(k=>{
@@ -49,9 +51,9 @@ function mergeState(a,b,bNewer){ // a=내 기기, b=서버
   return bNewer?b:a;
 }
 function pullProgress(){
-  if(!SYNC_ON())return;
+  if(!SYNC_ON())return;lastPull=Date.now();
   api('pull',{who:STUDENT.name,token:readKey(STUDENT.name),unit:UNIT.id}).then(j=>{
-    if(!j||!j.ok){return}
+    if(!j||!j.ok){if(j&&j.error==='알 수 없는 요청'&&!window.__syncWarned){window.__syncWarned=1;toast('☁️ 기기 연동이 아직 꺼져 있어요. 엄마에게 말해 주세요!')}return}
     if(!j.data){pushNow();return}
     let srv;try{srv=JSON.parse(j.data)}catch(e){return}
     if(S.__reset&&(srv.__t||0)<S.__reset){pushNow();return}
@@ -155,6 +157,8 @@ function afterLogin(cb){
   cb&&cb();addLetterButton();
   if(isMom()){if(!document.getElementById('mom-bar'))document.body.prepend(h('div',{id:'mom-bar',class:'mom-bar'},'👩 엄마 모드 · 아이 화면과 똑같이 보이고, 기록은 남지 않아요 · ',h('button',{onclick:openMomInbox},'📬 아이들 글 보기')));return}
   checkReplies();pullProgress();
+  if(isMom()&&MATHLAB_CONFIG.sheetUrl&&window.UNIT)api('pull',{who:STUDENT.name,token:readKey(STUDENT.name),unit:UNIT.id}).then(j=>{const bar=document.getElementById('mom-bar');if(!bar||bar.querySelector('.sync-st'))return;
+    bar.append(h('span',{class:'sync-st',style:'margin-left:8px'},j&&j.ok?'· ☁️ 기기 연동 켜짐':'· ⚠️ 기기 연동 꺼짐: Apps Script를 새 버전으로 배포해 주세요'))}).catch(()=>{});
   try{if(!sessionStorage.getItem('math-lab-visit-'+STUDENT.name)){sessionStorage.setItem('math-lab-visit-'+STUDENT.name,'1');logEvent('visit',{answer:deviceStr()})}}catch(e){}
   const k='math-lab-mood-'+(STUDENT&&STUDENT.name);let last='';try{last=localStorage.getItem(k)}catch(e){}
   if(last===todayStr())return;

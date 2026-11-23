@@ -171,7 +171,7 @@ function record_(ss, events) {
   updateSummary_(ss, events);
 }
 
-function doGet() { return ContentService.createTextOutput('수학 탐구실 기록 수집기가 작동 중이에요.'); }
+function doGet() { return ContentService.createTextOutput('수학 탐구실 기록 수집기가 작동 중이에요. (버전 3: 기기 연동)'); }
 
 function sheet_(ss, name, head) {
   let sh = ss.getSheetByName(name);

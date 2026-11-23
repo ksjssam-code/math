@@ -182,3 +182,5 @@ table.t th{background:#F7F1E6;font-weight:400;font-family:Jua}
 .ljump-b.ok{background:#E3F8EE;border-color:#A8E2C4;color:#1E7A4E}
 
 .prob.retry{border-color:#FFC98A}
+
+.askbox{margin-top:8px;display:flex;flex-direction:column;gap:6px}.askbox textarea{width:100%;font:inherit;padding:8px;border-radius:10px;border:1.5px solid #DDE3EE}

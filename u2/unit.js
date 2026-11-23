@@ -496,7 +496,7 @@ function gradeAllBar(getCards,label){
     const cards=getCards();let n=0;cards.forEach(c=>{if(c.grade&&c.grade())n++});
     out.className='fb show '+(n===cards.length?'good':'info');
     const first=cards.filter(c=>c.firstTry).length,retry=cards.filter(c=>c.classList.contains('retry')).length;
-    out.innerHTML=`<b class="jua" style="font-size:20px">${n} / ${cards.length}</b> 인정 (한 번에 ${first}개)`+(retry?` · 다시 풀 문제 ${retry}개`:'')+'<br>'+(n===cards.length?'모두 맞혔어요! 🎉':'틀린 문제는 한 번 더 기회가 있어요. 두 번 틀리면 풀이를 보고, 비슷한 새 문제로 다시 도전해요.');
+    out.innerHTML=`<b class="jua" style="font-size:20px">${n} / ${cards.length}</b> 인정 (한 번에 ${first}개)`+(retry?` · 다시 풀 문제 ${retry}개`:'')+'<br>'+(n===cards.length?'모두 맞혔어요! 🎉':'틀린 문제는 한 번 더 기회가 있어요. 두 번 틀리면 엄마에게 물어보고, 비슷한 새 문제로 다시 도전해요.');
     logEvent('score',{tag:'전체 채점',q:label,ok:n===cards.length?'O':'X',answer:`${n}/${cards.length} (한 번에 ${first}, 다시 풀 문제 ${retry})`});
   }},'📝 이 페이지 전체 채점');
   return h('div',{class:'card',style:'margin-top:8px'},h('div',{class:'row'},btn,h('span',{class:'small'},'다 풀었으면 한꺼번에 채점해 보세요. (문제마다 채점해도 돼요)')),out);
@@ -640,7 +640,7 @@ const TOP=[
   {q:'504의 약수 중에서 세 자리 수는 모두 몇 개인가요?',fields:[{kind:'num',ans:4,unit:'개'}],hints:['작은 약수를 찾으면 짝인 큰 약수가 나와요.','504÷○가 세 자리 수가 되려면 ○는 1부터 5 사이예요.'],sol:'504=1×504=2×252=3×168=4×126 ➜ 504, 252, 168, 126 ➜ 4개'},
 ];
 function renderTop(){
-  app.append(h('section',{class:'lesson-head',style:'--c:var(--ink)'},h('div',{class:'kicker'},'최상위 도전'),h('h1',{},'여러 개념을 엮어 생각하기'),h('p',{},'바로 풀이를 보지 말고, 힌트를 한 단계씩 열어 보세요. 막히면 앞의 심화 유형으로 돌아가도 좋아요.')));
+  app.append(h('section',{class:'lesson-head',style:'--c:var(--ink)'},h('div',{class:'kicker'},'최상위 도전'),h('h1',{},'여러 개념을 엮어 생각하기'),h('p',{},'힌트를 한 단계씩 열어 보세요. 막히면 앞의 심화 유형으로 돌아가거나 📮 엄마에게 물어봐요.')));
   const tl=h('div');TOP.forEach((p,i)=>{p.id='top-'+(i+1);tl.append(renderProblem(p,i+1,{color:'var(--ink)'}))});
   app.append(tl,gradeAllBar(()=>[...tl.children],'최상위 도전'));
 }

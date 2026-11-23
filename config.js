@@ -5,7 +5,7 @@
               (이름을 바꾸면 시트 '비밀번호' 탭의 이름도 똑같이 바꿔 주세요.) */
 window.MATHLAB_CONFIG = {
   readAloud: false,
-  sheetUrl: "https://script.google.com/macros/s/AKfycbxuwBjBGaWzDGx16LM0V6M1flht6k44hAfXpTvrdxvc5_1DXy7q9N95pcPRf19YzE_c6g/exec",
+  sheetUrl: "https://script.google.com/macros/s/AKfycbzuoDw8OPFAeVagmgRuw2Dz6y4r_6BnWXg-IBAhJTjJbgKQaux1E_Rer36K7uADRT8LRQ/exec",
   kids: [
     {name: "서윤", emoji: "🐰", color: "var(--coral)"},
     {name: "서현", emoji: "🐻", color: "var(--sky)"}

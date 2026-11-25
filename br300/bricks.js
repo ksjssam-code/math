@@ -8,7 +8,8 @@ const key = (U, k) => `br-${U.n}-${k}`;
 const got = (U, k) => !!S.explore[key(U, k)];
 const PARTS = [
   {k: 'words', n: '🔤 Words', d: '단어 익히기 → 읽기·뜻 말하기 → 단어 퀴즈'},
-  {k: 'check', n: '📚 Reading Check', d: '책을 읽고 이해 확인'},
+  {k: 'read', n: '📖 Read', d: '본문 읽기 · 원어민 듣기 · 단어 누르면 뜻'},
+  {k: 'check', n: '📚 Reading Check', d: '읽고 이해 확인'},
   {k: 'grammar', n: '🧩 Grammar', d: '이 단원의 문법 익히기 (6문제)'},
   {k: 'think', n: '✍️ Think & Write', d: '내 생각 쓰기 (엄마에게 전달돼요)'},
   {k: 'test', n: '📝 Unit Test', d: '단원 평가 유형 10문제 (한 번에 맞힌 것만 점수)'},
@@ -86,7 +87,7 @@ function checkTab(U, done) {
   const root = h('div');
   root.append(h('div', {class: 'br-book'}, h('div', {style: 'font-size:40px'}, '📗'), h('div', {},
     h('div', {class: 'br-big'}, `책 Unit ${String(U.n).padStart(2, '0')}을 펴요`), h('div', {}, `“${U.t}”`),
-    h('div', {class: 'small'}, '본문은 책으로 읽어요. 처음엔 눈으로, 그다음엔 소리 내어 읽어요. 모르는 단어는 Words 탭에서 확인해요.'))));
+    h('div', {class: 'small'}, '본문은 📖 Read 탭이나 책으로 읽어요. 처음엔 눈으로, 그다음엔 소리 내어 읽어요.'))));
   root.append(h('div', {class: 'q-box', style: '--c:var(--sky)'}, h('b', {}, '🤔 읽기 전에 '), U.pre));
   const reads = (S.reads = S.reads || {})[U.n] || 0;
   const chk = h('div', {class: 'g1-row', style: 'gap:10px;flex-wrap:wrap;margin:12px 0'});
@@ -331,7 +332,7 @@ function home() {
 function unit(U) {
   app.append(h('section', {class: 'lesson-head'}, h('div', {class: 'kicker'}, `Unit ${String(U.n).padStart(2, '0')} ${U.em}`), h('h1', {}, U.t), h('p', {}, U.ko)));
   const tabs = h('div', {class: 'g1-tabs'}); const body = h('div');
-  const F = {words: wordsTab, check: checkTab, grammar: grammarTab, think: thinkTab, test: testTab, game: gameTab};
+  const F = {words: wordsTab, read: readTab, check: checkTab, grammar: grammarTab, think: thinkTab, test: testTab, game: gameTab};
   const mark = () => [...tabs.children].forEach((t, i) => t.classList.toggle('done', got(U, PARTS[i].k)));
   function show(i) {
     EN.stop(); [...tabs.children].forEach((t, j) => t.classList.toggle('on', i === j)); body.innerHTML = '';

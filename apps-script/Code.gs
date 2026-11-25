@@ -16,6 +16,7 @@ const ACCESS_TYPES = ['login', 'visit'];
 const WRITE_TYPES = ['note', 'letter', 'mood'];
 const TYPE_KO = {attempt: '문제 채점', star: '별 획득', score: '점수'};
 const MAX_FAILS = 5, LOCK_SEC = 600;
+const BR_FOLDER = '브릭스 본문';   // 구글 드라이브 폴더 이름 (본문·원어민 녹음, 가족만 볼 수 있게 여기서만 보내요)
 
 /** 처음 한 번 ▶ 실행: '비밀번호' 탭을 만들어요. 그다음 시트에서 비밀번호를 적어 주세요. */
 function setup() {
@@ -126,6 +127,22 @@ function action_(ss, b) {
     if (i < 0) sh.appendRow(row); else sh.getRange(i + 2, 1, 1, 4).setValues([row]);
     return {ok: true};
   }
+  if (b.action === 'brText') {
+    const cache = CacheService.getScriptCache();
+    let t = cache.get('brText');
+    if (!t) {
+      const f = brFile_('bricks_text.json');
+      if (!f) return {ok: false, error: "드라이브 '" + BR_FOLDER + "' 폴더에 bricks_text.json이 없어요"};
+      t = f.getBlob().getDataAsString('UTF-8');
+      try { cache.put('brText', t, 21600); } catch (e) {}
+    }
+    return {ok: true, data: JSON.parse(t)};
+  }
+  if (b.action === 'brAudio') {
+    const f = brFile_('unit' + ('0' + Number(b.unit)).slice(-2) + '.m4a');
+    if (!f) return {ok: false, error: '녹음 파일이 없어요'};
+    return {ok: true, mime: 'audio/mp4', b64: Utilities.base64Encode(f.getBlob().getBytes())};
+  }
   if (b.action === 'list') {
     const sh = ss.getSheetByName(WRITE);
     if (!sh || sh.getLastRow() < 2) return {ok: true, rows: []};
@@ -171,7 +188,21 @@ function record_(ss, events) {
   updateSummary_(ss, events);
 }
 
-function doGet() { return ContentService.createTextOutput('수학 탐구실 기록 수집기가 작동 중이에요. (버전 3: 기기 연동)'); }
+function brFile_(name) {
+  const fs = DriveApp.getFoldersByName(BR_FOLDER);
+  while (fs.hasNext()) { const it = fs.next().getFilesByName(name); if (it.hasNext()) return it.next(); }
+  return null;
+}
+/** 브릭스 본문 폴더를 올린 뒤 한 번 ▶ 실행: 드라이브 권한을 허락하고, 파일이 잘 있는지 확인해요. */
+function checkBricks() {
+  const need = ['bricks_text.json'];
+  for (let i = 1; i <= 20; i++) need.push('unit' + ('0' + i).slice(-2) + '.m4a');
+  const missing = need.filter(n => !brFile_(n));
+  CacheService.getScriptCache().remove('brText');
+  Logger.log(missing.length ? '없는 파일: ' + missing.join(', ') : '✅ 21개 파일이 모두 있어요!');
+}
+
+function doGet() { return ContentService.createTextOutput('수학 탐구실 기록 수집기가 작동 중이에요. (버전 4: 브릭스 본문)'); }
 
 function sheet_(ss, name, head) {
   let sh = ss.getSheetByName(name);

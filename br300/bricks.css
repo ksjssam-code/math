@@ -65,3 +65,10 @@
 .rpop-ko{font-size:20px;margin-top:4px}
 .en-play.on{background:#E3F8EE}
 @media(max-width:560px){.rtext{font-size:18px;padding:14px}}
+
+.rbar{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;width:min(520px,calc(100% - 24px));background:#fff;border:3px solid #9EE0BD;border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:10px 14px;z-index:55;display:flex;flex-direction:column;gap:8px;text-align:center}
+.rbar.listen{border-color:#CFE0FF}
+.rbar-t{font-family:Jua,sans-serif;font-size:20px}
+.rbar-track{height:8px;background:#EEF2F8;border-radius:99px;overflow:hidden}
+.rbar-fill{height:100%;background:#4CC38A;width:100%;transition:width .1s linear}
+.rbar.listen .rbar-fill{background:#9DBBF5}

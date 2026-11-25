@@ -112,19 +112,48 @@ function readTab(U, done) {
     audio.onplay = () => aBtn.textContent = '⏸ 잠깐 멈추기'; audio.onpause = () => aBtn.textContent = '▶ 이어서 듣기';
     audio.onended = () => { aBtn.textContent = '🎧 다시 듣기'; logEvent('attempt', {tag: `Unit ${U.n} 본문 듣기`, q: U.t, ok: 'O', answer: '원어민 전체 듣기'}); };
     const sp = h('div', {class: 'rspeed'}); [[1, '보통'], [0.85, '조금 느리게'], [0.7, '느리게']].forEach(([r, t]) => sp.append(h('button', {class: 'g1-chip' + (r === 1 ? ' sel' : ''), onclick: e => { rate = r; audio.playbackRate = r; [...sp.children].forEach(c => c.classList.toggle('sel', c === e.target)); }}, t)));
-    let ttsOn = false;
-    const tBtn = h('button', {class: 'g1-btn ghost', onclick: () => { if (ttsOn) return stopTts(); audio.pause(); runTts(0); }}, '🔊 한 문장씩 듣기');
-    function stopTts() { ttsOn = false; EN.stop(); tBtn.textContent = '🔊 한 문장씩 듣기'; root.querySelectorAll('.rs.now').forEach(x => x.classList.remove('now')); }
+    let ttsOn = false, gapMode = S.gapMode || 'auto', skip = null, again = false, nextNow = false;
+    const tBtn = h('button', {class: 'g1-btn ghost', onclick: () => { if (ttsOn) return stopTts(); audio.pause(); runTts(0); }}, '🔊 한 문장씩 듣고 따라 읽기');
+    const gp = h('div', {class: 'rspeed'});
+    [['auto', '자동 (문장 길이만큼)'], ['long', '넉넉하게'], ['tap', '내가 넘기기']].forEach(([k, t]) => gp.append(h('button', {class: 'g1-chip' + (k === gapMode ? ' sel' : ''), onclick: e => { gapMode = k; S.gapMode = k; save(); [...gp.children].forEach(c => c.classList.toggle('sel', c === e.target)); }}, t)));
+    // 따라 읽기 막대 (화면 아래)
+    const barTxt = h('div', {class: 'rbar-t'}), barFill = h('div', {class: 'rbar-fill'});
+    const bar = h('div', {class: 'rbar hide'}, barTxt, h('div', {class: 'rbar-track'}, barFill),
+      h('div', {class: 'g1-row', style: 'gap:6px;justify-content:center;flex-wrap:wrap'},
+        h('button', {class: 'en-play', onclick: () => { again = true; EN.stop(); skip && skip(); }}, '🔁 다시 듣기'),
+        h('button', {class: 'en-play', onclick: () => { if (bar.classList.contains('listen')) nextNow = true; EN.stop(); skip && skip(); }}, '다음 문장 ▶'),
+        h('button', {class: 'en-play', onclick: () => stopTts()}, '⏹ 그만')));
+    function stopTts() { ttsOn = false; EN.stop(); skip && skip(); bar.classList.add('hide'); tBtn.textContent = '🔊 한 문장씩 듣고 따라 읽기'; root.querySelectorAll('.rs.now').forEach(x => x.classList.remove('now')); }
+    const waitFor = ms => new Promise(res => {
+      let t = null, start = Date.now(), tick = null;
+      skip = () => { clearTimeout(t); clearInterval(tick); skip = null; res(); };
+      if (ms == null) { barFill.style.width = '100%'; return; }
+      tick = setInterval(() => { const p = Math.min(1, (Date.now() - start) / ms); barFill.style.width = (100 - p * 100) + '%'; }, 100);
+      t = setTimeout(() => skip && skip(), ms);
+    });
     async function runTts(from) {
-      ttsOn = true; tBtn.textContent = '⏹ 멈추기'; const ss = [...root.querySelectorAll('.rs')];
+      ttsOn = true; tBtn.textContent = '⏹ 멈추기'; bar.classList.remove('hide'); const ss = [...root.querySelectorAll('.rs')];
       for (let i = from; i < ss.length && ttsOn; i++) {
         ss.forEach(x => x.classList.remove('now')); ss[i].classList.add('now'); ss[i].scrollIntoView({block: 'center', behavior: 'smooth'});
-        await speakFull(ss[i].textContent, 0.75 * rate); await new Promise(r => setTimeout(r, 250));
+        barTxt.innerHTML = `👂 잘 들어요 <span class="small">(${i + 1} / ${ss.length})</span>`; barFill.style.width = '100%'; bar.classList.add('listen');
+        const t0 = Date.now();
+        await Promise.race([speakFull(ss[i].textContent, 0.75 * rate), new Promise(r => { skip = r; })]); skip = null;
+        if (!ttsOn) break;
+        if (again) { again = false; i--; continue; }
+        if (nextNow) { nextNow = false; continue; }
+        const spoken = Date.now() - t0;
+        bar.classList.remove('listen');
+        barTxt.innerHTML = gapMode === 'tap' ? '🗣️ 이제 따라 읽어요! 다 읽으면 <b>다음 문장 ▶</b>' : `🗣️ 이제 따라 읽어요! <span class="small">(${i + 1} / ${ss.length})</span>`;
+        const ms = gapMode === 'tap' ? null : gapMode === 'long' ? spoken * 1.8 + 2500 : spoken * 1.2 + 1200;
+        await waitFor(ms);
+        if (again) { again = false; i--; continue; }
       }
-      if (ttsOn) stopTts();
+      if (ttsOn) { stopTts(); toast('👏 한 문장씩 따라 읽기 끝!'); logEvent('attempt', {tag: `Unit ${U.n} 따라 읽기`, q: U.t, ok: 'O', answer: '한 문장씩 듣고 따라 읽기 완료'}); }
     }
-    box.append(h('div', {class: 'rtools'}, h('div', {class: 'g1-row', style: 'gap:8px;flex-wrap:wrap'}, aBtn, tBtn), h('div', {class: 'small', style: 'margin-top:6px'}, '빠르기'), sp, audio),
-      G1.say('<b>① 원어민 소리로 전체 듣기 → ② 한 문장씩 들으며 따라 읽기 → ③ 혼자 소리 내어 읽기</b><br>모르는 단어는 <b>눌러 보세요.</b> 소리와 뜻이 나와요. 노란 밑줄은 이번 단원 단어예요.'));
+    document.body.append(bar);
+    window.addEventListener('hashchange', () => { stopTts(); bar.remove(); }, {once: true});
+    box.append(h('div', {class: 'rtools'}, h('div', {class: 'g1-row', style: 'gap:8px;flex-wrap:wrap'}, aBtn, tBtn), h('div', {class: 'small', style: 'margin-top:6px'}, '빠르기'), sp, h('div', {class: 'small', style: 'margin-top:6px'}, '따라 읽기 시간'), gp, audio),
+      G1.say('<b>① 원어민 소리로 전체 듣기 → ② 한 문장씩 듣고 따라 읽기 → ③ 혼자 소리 내어 읽기</b><br>②에서는 한 문장을 들려준 뒤 따라 읽을 시간을 줘요.<br>모르는 단어는 <b>눌러 보세요.</b> 소리와 뜻이 나와요. 노란 밑줄은 이번 단원 단어예요.'));
     // 본문
     const art = h('article', {class: 'rtext'}, h('h2', {}, P.title || U.t));
     const vocabSet = new Set(U.v.flatMap(w => [w[0].toLowerCase(), ...(cloze(w) ? [cloze(w).ans.toLowerCase()] : [])]));

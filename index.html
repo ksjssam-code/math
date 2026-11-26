@@ -44,6 +44,7 @@ function render(){
     g.append(c);
   });
   app.append(g);
+  app.append(h('a',{class:'card print-card',href:'print/',style:'display:flex;align-items:center;gap:14px;margin-top:14px;text-decoration:none;color:inherit'},h('div',{style:'font-size:34px'},'🖨️'),h('div',{},h('b',{class:'jua',style:'font-size:20px'},'영어 단어 쓰기 활동지'),h('div',{class:'small'},'단원 단어를 손으로 따라 쓰고 외워요. 출력해서 쓰고, 시험지로 확인해요.'))));
   if(STUDENT)renderNoteWall(app);
 }
 updateWho();ensureStudent(render);flushLog();

@@ -1,0 +1,59 @@
+/* 화면: 고르기 */
+.pbox{background:#fff;border-radius:20px;padding:16px 18px;box-shadow:0 2px 0 #EDE6DA}
+.ubox{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;margin-top:6px}
+.uchip{border:2px solid #E6E1D6;background:#fff;border-radius:12px;padding:6px 8px;text-align:left;cursor:pointer;display:flex;flex-direction:column;font:inherit}
+.uchip small{font-size:11px;color:#778;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.uchip.sel{border-color:#FF7A59;background:#FFF1EC}
+#sheets{display:flex;flex-direction:column;align-items:center;gap:18px;padding:20px 0 60px;background:#EEF0F4}
+#sheets:empty{display:none}
+
+/* A4 활동지 */
+.sheet{width:210mm;min-height:297mm;background:#fff;box-sizing:border-box;padding:11mm 12mm;box-shadow:0 2px 12px rgba(0,0,0,.12);font-family:'Gowun Dodum','Noto Sans CJK KR',sans-serif;color:#222;position:relative}
+.sh-head{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;border-bottom:2px solid #333;padding-bottom:5px;margin-bottom:4mm;align-items:end}
+.sh-kind{font-family:Jua,'Noto Sans CJK KR',sans-serif;font-size:17px;background:#222;color:#fff;border-radius:8px;padding:3px 10px;grid-row:span 2}
+.sh-title b{font-family:Andika,'Comic Relief',sans-serif;font-size:15px;margin-right:8px}
+.sh-title span{font-family:Andika,'Comic Relief',sans-serif;font-size:13px;color:#555}
+.sh-name{display:flex;gap:16px;font-size:13px;justify-content:flex-end}
+.sh-score{font-weight:700}
+.sh-tip{font-size:12px;color:#555;margin:0 0 3mm}
+.wb{display:grid;grid-template-columns:46mm 1fr;gap:3mm;align-items:center;margin-bottom:3mm;break-inside:avoid}
+.big .wb{grid-template-columns:30mm 1fr;margin-bottom:2.6mm}
+.wb-l{display:flex;flex-direction:column;gap:1mm}
+.wb-l.pic{align-items:center;text-align:center}
+.emo{font-size:30px;line-height:1}
+.wb-w{font-family:Andika,'Comic Relief',sans-serif;font-weight:700;font-size:16px}
+.big .wb-w{font-size:18px}
+.wb-ko{font-size:12px;color:#444;font-weight:400}
+.wb-r{display:flex;flex-direction:column;gap:1.4mm}
+.sb{margin-bottom:3.4mm;break-inside:avoid}
+.sb-n{font-size:12px;color:#444;margin-bottom:1mm;font-family:Andika,'Comic Relief','Noto Sans CJK KR',sans-serif}
+.sb .fl+.fl{margin-top:1.2mm}
+.xg{display:grid;grid-template-columns:1fr 1fr;gap:3mm 6mm}
+.xb{break-inside:avoid}.xb .fl{display:block;margin-top:1mm}
+svg.fl{display:block;overflow:visible}
+svg.fl .ln{stroke:#B9C0CC;stroke-width:.2}
+svg.fl .ln.mid{stroke-dasharray:1 .8;stroke:#C9CFD9}
+svg.fl .ln.base{stroke:#E07A7A;stroke-width:.25}
+svg.fl .tx.trace{fill:#F1F3F7;stroke:#8F98A8;stroke-width:.16;stroke-dasharray:.55 .35;paint-order:stroke}
+svg.fl .tx.solid{fill:#333}
+.q-t{font-family:Jua,'Noto Sans CJK KR',sans-serif;font-size:15px;margin:5mm 0 2.5mm}
+.q-t+.fl,.fl+.fl{margin-top:1.6mm}
+.tg{display:grid;grid-template-columns:1fr 1fr;gap:3mm 8mm}
+.ti{break-inside:avoid}.ti .fl{margin-top:1mm}
+.ti-q{font-size:14px;display:flex;align-items:center;gap:4px}
+.ti.pic .emo{font-size:40px}
+.dots{font-size:10px;color:#999;letter-spacing:2px;margin-left:6px}
+.pos{font-size:11px;color:#777}
+.ti-s{font-family:Andika,'Comic Relief',sans-serif;font-size:15px;line-height:2.3;margin-bottom:1mm}
+.blank{display:inline-block;width:34mm;border-bottom:1.5px solid #333;margin:0 2px}
+.ti-c{font-family:Andika,'Comic Relief',sans-serif;font-size:15px;display:flex;align-items:flex-end;gap:6px;height:11mm}
+.kline{flex:1;border-bottom:1.5px solid #333;height:1px}
+.key{font-size:13px;margin-bottom:4mm;line-height:1.8}.key b{display:block;font-size:14px}
+@page{size:A4 portrait;margin:0}
+@media print{
+  .noprint,#toast,#mom-bar,.letter-fab,.overlay,.mom-bar{display:none!important}
+  body{background:#fff!important}
+  #sheets{background:none;padding:0;gap:0;display:block}
+  .sheet{box-shadow:none;break-after:page;min-height:auto;height:297mm;overflow:hidden}
+  .sheet:last-child{break-after:auto}
+}

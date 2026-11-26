@@ -57,3 +57,8 @@ svg.fl .tx.solid{fill:#333}
   .sheet{box-shadow:none;break-after:page;min-height:auto;height:297mm;overflow:hidden}
   .sheet:last-child{break-after:auto}
 }
+
+.gbox{background:#F1F7FF;border:1.5px solid #9DBBF5;border-radius:10px;padding:3mm 4mm;font-size:13px;line-height:1.6}
+.gbox-t{font-family:Jua,'Noto Sans CJK KR',sans-serif;font-size:16px;margin-bottom:1mm}
+.gi{margin-bottom:3mm;break-inside:avoid}
+.gi-s{font-family:Andika,'Comic Relief',sans-serif;font-size:15px;margin-bottom:1.2mm}

@@ -114,6 +114,19 @@ function brTest(U, withExtra, key) {
   return [p];
 }
 
+function brGrammar(U, key) {
+  const g = GR[U.n - 1]; const p = page();
+  p.append(head(`Bricks Reading 300 · Unit ${String(U.n).padStart(2, '0')}`, U.t, '🧩 문법 활동지', g.items.length));
+  p.append(h('div', {class: 'gbox'}, h('div', {class: 'gbox-t'}, '📌 ' + g.t), h('div', {}, g.ex)));
+  p.append(h('div', {class: 'q-t'}, 'A. 괄호 안에서 알맞은 말에 ○ 하고, 완성한 문장을 바르게 쓰세요.'));
+  const items = shuffle(g.items);
+  items.forEach(([s, o], i) => p.append(h('div', {class: 'gi'},
+    h('div', {class: 'gi-s', html: `${i + 1}. ` + s.replace('___', `( ${shuffle(o).join(' / ')} )`)}), fourLine(186, 11))));
+  p.append(h('div', {class: 'q-t'}, `⭐ 보너스: '${g.t}'을(를) 써서 나만의 문장을 2개 써 봐요.`), fourLine(186, 11), fourLine(186, 11));
+  key.push({title: `Bricks Unit ${String(U.n).padStart(2, '0')} 문법 · ${g.t}`, items: items.map(([s, o]) => s.replace('___', o[0]))});
+  return [p];
+}
+
 /* ---------- 서현: Smart Phonics ---------- */
 const phWords = u => Object.values(u.fam).flat();
 const phExtra = u => Object.values(u.extra || {}).flat().filter(w => /^[a-z]+$/.test(w));
@@ -160,7 +173,7 @@ function render() {
   updateWho();
   app.innerHTML = '';
   const kidDefault = STUDENT && STUDENT.name === '서현' ? 'ph' : 'br';
-  const st = {book: kidDefault, units: new Set([1]), practice: true, test: true, key: isMom(), extra: false};
+  const st = {book: kidDefault, units: new Set([1]), practice: true, test: true, grammar: true, key: isMom(), extra: false};
   app.append(h('section', {class: 'lesson-head'}, h('div', {class: 'kicker'}, '🖨️ 출력용'), h('h1', {}, '영어 단어 쓰기 활동지'),
     h('p', {}, '단원을 고르고 [활동지 만들기] → [🖨️ 인쇄]를 누르세요. A4 세로로 나와요. 시험지는 만들 때마다 문제 순서가 바뀌어요.')));
   const box = h('div', {class: 'pbox'}); app.append(box);
@@ -176,7 +189,7 @@ function render() {
     const list = st.book === 'br' ? BR.map(U => [U.n, `Unit ${U.n}`, U.t]) : (await loadPhonics()).UNITS.map(u => [u.no, phTitle(u), u.title]);
     list.forEach(([n, a, b]) => unitBox.append(h('button', {class: 'uchip' + (st.units.has(n) ? ' sel' : ''), title: b, onclick: e => { st.units.has(n) ? st.units.delete(n) : st.units.add(n); e.currentTarget.classList.toggle('sel'); }}, h('b', {}, a), h('small', {}, b))));
     opts.innerHTML = '';
-    opts.append(chk('practice', '✏️ 쓰기 연습지'), chk('test', '📝 시험지'), chk('key', '✅ 정답지 (엄마용)', isMom()), chk('extra', '📒 책 단어장 단어도 넣기', st.book === 'br'));
+    opts.append(chk('practice', '✏️ 쓰기 연습지'), chk('test', '📝 시험지'), chk('grammar', '🧩 문법 활동지', st.book === 'br'), chk('key', '✅ 정답지 (엄마용)', isMom()), chk('extra', '📒 책 단어장 단어도 넣기', st.book === 'br'));
   }
   async function build() {
     sheets.innerHTML = ''; const key = []; const units = [...st.units].sort((a, b) => a - b);
@@ -184,7 +197,7 @@ function render() {
     if (st.book === 'ph') await loadPhonics();
     const pages = [];
     units.forEach(n => {
-      if (st.book === 'br') { const U = BR.find(x => x.n === n); if (st.practice) pages.push(...brPractice(U, st.extra)); if (st.test) pages.push(...brTest(U, st.extra, key)); }
+      if (st.book === 'br') { const U = BR.find(x => x.n === n); if (st.practice) pages.push(...brPractice(U, st.extra)); if (st.test) pages.push(...brTest(U, st.extra, key)); if (st.grammar) pages.push(...brGrammar(U, key)); }
       else { const u = PH.UNITS.find(x => x.no === n); if (st.practice) pages.push(...phPractice(u)); if (st.test) pages.push(...phTest(u, key)); }
     });
     if (st.key && isMom()) pages.push(...keyPages(key));
